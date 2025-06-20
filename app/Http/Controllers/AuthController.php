@@ -8,17 +8,11 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    /**
-     * แสดงฟอร์มล็อกอิน
-     */
     public function showLoginForm()
     {
         return view('login');
     }
 
-    /**
-     * ดำเนินการล็อกอิน
-     */
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -44,9 +38,6 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    /**
-     * ดำเนินการล็อกเอาต์
-     */
     public function logout(Request $request)
     {
         Auth::logout();
