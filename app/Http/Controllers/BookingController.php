@@ -7,6 +7,7 @@ class BookingController extends Controller
 {
     public function create()
     {
+        
         return view('user.booking.create');
     }
 
