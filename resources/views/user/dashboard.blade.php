@@ -11,7 +11,7 @@
                     <hr>
                     <div class="d-grid gap-2 col-md-6 mx-auto">
                         {{-- ลิงก์ไปยังหน้าค้นหา/จองสนามจริง --}}
-                        <a href="{{route('user.booking.form')}}" class="btn btn-success btn-lg">
+                        <a href="{{route('user.booking.create')}}" class="btn btn-success btn-lg">
                             <i class="fas fa-futbol me-2"></i> จองสนามฟุตบอลทันที!
                         </a>
                     </div>

@@ -3,7 +3,7 @@
     <div class="container mt-5">
         <h2>แบบฟอร์มเช่าสนามฟุตบอล</h2>
 
-        <form method="POST" action="{{ route('user.bookings.store') }}">
+        <form method="POST" action="{{ route('user.booking.confirm') }}">
             @csrf
 
             <!-- วันที่จอง -->
@@ -17,9 +17,9 @@
                 <label for="field_id" class="form-label">เลือกสนาม</label>
                 <select class="form-select" id="field_id" name="field_id" required>
                     <option value="">-- กรุณาเลือกสนาม --</option>
-                    @foreach ($fields as $field)
+                    {{-- @foreach ($fields as $field)
                         <option value="{{ $field->id }}">{{ $field->name }}</option>
-                    @endforeach
+                    @endforeach --}}
                 </select>
             </div>
 

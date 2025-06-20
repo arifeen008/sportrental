@@ -13,24 +13,6 @@ class AdminController extends Controller
         return view('admin.dashboard');
     }
 
-    public function rentSchedule()
-    {
-        return view('admin.rent-schedule');
-    }
-
-    public function members()
-    {
-        return view('admin.members');
-    }
-
-    public function reports()
-    {
-        return view('admin.reports');
-    }
-
-    public function rentRequests()
-    {
-        return view('admin.rent-requests');
-    }
+    
 
 }
