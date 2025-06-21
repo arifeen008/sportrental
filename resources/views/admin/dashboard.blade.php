@@ -20,7 +20,7 @@
                                 <a href="#" class="btn btn-primary">รายงานสรุป</a>
                             </div>
                             <div class="col-sm-12 col-md-6 mb-3">
-                                <a href="{{ route('admin.field.index') }}" class="btn btn-primary">เพิ่มสนามกีฬา</a>
+                                <a href="#" class="btn btn-primary">เพิ่มสนามกีฬา</a>
                             </div>
                             <div class="col-sm-12 col-md-6 mb-3">
                                 <a href="#" class="btn btn-primary">ดูคำร้องเช่าสนาม</a>

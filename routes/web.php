@@ -29,4 +29,6 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
 
     Route::get('/booking', [BookingController::class, 'create'])->name('booking.create');
     Route::post('/booking/confirm', [BookingController::class, 'confirm'])->name('booking.confirm');
+
+    Route::post('/booking/store', [BookingController::class, 'store'])->name('booking.store');
 });

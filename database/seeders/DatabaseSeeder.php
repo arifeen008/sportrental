@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         // ------------------------------------
 
         $this->call([
+            UserSeeder::class, // <-- เพิ่มเข้ามาเป็นอันแรก
             FieldTypeSeeder::class,
             HourlyRateSeeder::class,
             PackageRateSeeder::class,
