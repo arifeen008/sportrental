@@ -1,8 +1,6 @@
-@extends('layouts.app')
-
-@push('styles')
-    {{-- เราสามารถใส่ CSS ที่จำเป็นสำหรับหน้านี้ได้ (ถ้ามี) --}}
-    {{-- Font Awesome สำหรับไอคอน --}}
+<?php $__env->startPush('styles'); ?>
+    
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <style>
         /* ซ่อนส่วนของฟอร์มที่ยังไม่ถูกเลือก */
@@ -10,9 +8,9 @@
             display: none;
         }
     </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-lg-8">
@@ -22,18 +20,19 @@
                     </div>
                     <div class="card-body p-4">
 
-                        {{-- ส่วนสำหรับแสดงข้อความ Error ที่ถูกส่งกลับมาจาก Controller --}}
-                        @if (session('error'))
+                        
+                        <?php if(session('error')): ?>
                             <div class="alert alert-danger" role="alert">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
-                                {{ session('error') }}
-                            </div>
-                        @endif
+                                <?php echo e(session('error')); ?>
 
-                        <form action="{{ route('user.booking.confirm') }}" method="POST">
-                            @csrf
+                            </div>
+                        <?php endif; ?>
+
+                        <form action="<?php echo e(route('user.booking.confirm')); ?>" method="POST">
+                            <?php echo csrf_field(); ?>
                             <div class="row g-3">
-                                {{-- ประเภทการจอง --}}
+                                
                                 <div class="col-12">
                                     <label for="booking_type" class="form-label fw-bold">ประเภทการจอง</label>
                                     <select class="form-select" id="booking_type" name="booking_type" required>
@@ -43,7 +42,7 @@
                                     </select>
                                 </div>
 
-                                {{-- ส่วนสำหรับ "รายชั่วโมง" และ "บัตรสมาชิก" --}}
+                                
                                 <div id="hourly_booking_section" class="form-section col-12">
                                     <div class="row g-3">
                                         <div class="col-12">
@@ -56,25 +55,25 @@
                                         <div class="col-md-6">
                                             <label for="start_time" class="form-label">เวลาเริ่ม</label>
                                             <select class="form-select" name="start_time">
-                                                @for ($i = 9; $i <= 21; $i++)
-                                                    <option value="{{ sprintf('%02d', $i) }}:00">
-                                                        {{ sprintf('%02d', $i) }}:00</option>
-                                                @endfor
+                                                <?php for($i = 9; $i <= 21; $i++): ?>
+                                                    <option value="<?php echo e(sprintf('%02d', $i)); ?>:00">
+                                                        <?php echo e(sprintf('%02d', $i)); ?>:00</option>
+                                                <?php endfor; ?>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
                                             <label for="end_time" class="form-label">เวลาสิ้นสุด</label>
                                             <select class="form-select" name="end_time">
-                                                @for ($i = 10; $i <= 22; $i++)
-                                                    <option value="{{ sprintf('%02d', $i) }}:00">
-                                                        {{ sprintf('%02d', $i) }}:00</option>
-                                                @endfor
+                                                <?php for($i = 10; $i <= 22; $i++): ?>
+                                                    <option value="<?php echo e(sprintf('%02d', $i)); ?>:00">
+                                                        <?php echo e(sprintf('%02d', $i)); ?>:00</option>
+                                                <?php endfor; ?>
                                             </select>
                                         </div>
                                     </div>
                                 </div>
 
-                                {{-- ส่วนสำหรับ "เช่าเหมาวัน" --}}
+                                
                                 <div id="package_booking_section" class="form-section col-12">
                                     <div class="row g-3">
                                         <div class="col-12">
@@ -120,11 +119,11 @@
                                     </div>
                                 </div>
 
-                                {{-- ฟิลด์ที่แสดงตลอด --}}
+                                
                                 <div class="col-12">
                                     <label for="booking_date" class="form-label">ในวันที่</label>
                                     <input type="date" class="form-control" id="booking_date" name="booking_date"
-                                        min="{{ date('Y-m-d') }}" required>
+                                        min="<?php echo e(date('Y-m-d')); ?>" required>
                                 </div>
                                 <div class="col-12">
                                     <label for="notes" class="form-label">หมายเหตุ (ถ้ามี)</label>
@@ -142,34 +141,34 @@
             </div>
         </div>
     </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
         // ตรวจสอบว่ามี session 'success' ถูกส่งกลับมาหรือไม่
-        @if (session('success'))
+        <?php if(session('success')): ?>
             Swal.fire({
                 icon: 'success',
                 title: 'สำเร็จ!',
-                text: '{{ session('success') }}',
+                text: '<?php echo e(session('success')); ?>',
                 timer: 3000, // แสดงผล 3 วินาทีแล้วหายไป
                 timerProgressBar: true,
                 showConfirmButton: false
             });
-        @endif
+        <?php endif; ?>
 
         // ตรวจสอบว่ามี session 'error' ถูกส่งกลับมาหรือไม่
-        @if (session('error'))
+        <?php if(session('error')): ?>
             Swal.fire({
                 icon: 'error',
                 title: 'เกิดข้อผิดพลาด!',
-                text: '{{ session('error') }}'
+                text: '<?php echo e(session('error')); ?>'
                 // สำหรับ error เราจะไม่ตั้งเวลาให้หายไป ให้ผู้ใช้กดยืนยันเอง
             });
-        @endif
+        <?php endif; ?>
     </script>
-    {{-- JavaScript สำหรับสลับฟอร์ม --}}
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const bookingTypeSelect = document.getElementById('booking_type');
@@ -210,4 +209,6 @@
             toggleSections();
         });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\htdocs\sportsrental\resources\views/user/booking/create.blade.php ENDPATH**/ ?>

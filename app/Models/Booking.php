@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,45 +9,22 @@ class Booking extends Model
     use HasFactory;
 
     /**
-     * The attributes that aren't mass assignable.
-     *
-     * @var array
+     * การตั้งค่านี้สำคัญมาก มันอนุญาตให้ทุกคอลัมน์ (รวมถึง user_id) ถูกบันทึกได้
      */
     protected $guarded = ['id'];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'booking_date' => 'date',
+        'booking_date'              => 'date',
         'price_calculation_details' => 'array',
-        'password' => 'hashed',
     ];
 
-    /**
-     * Get the user that owns the booking.
-     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the field type for the booking.
-     */
     public function fieldType()
     {
         return $this->belongsTo(FieldType::class);
     }
-
-    /**
-     * Get the user membership associated with the booking (if any).
-     * หมายเหตุ: ความสัมพันธ์นี้จะใช้ได้เมื่อมีการสร้างตารางและ Model 'UserMembership' ในอนาคต
-     */
-    // public function userMembership()
-    // {
-    //     return $this->belongsTo(UserMembership::class);
-    // }
 }
