@@ -8,6 +8,7 @@ use App\Models\MembershipTier;
 use App\Models\PackageRate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
@@ -187,7 +188,7 @@ class BookingController extends Controller
     {
         // 1. เตรียมข้อมูลพื้นฐานที่จะบันทึกเหมือนกันทุกประเภท
         $dataToSave = [
-            'user_id'        => auth()->id() ?? 1, // ในระบบจริงใช้ auth()->id()
+            'user_id'        => Auth::id() ?? 1, // ในระบบจริงใช้ auth()->id()
             'booking_type'   => $request->input('booking_type'),
             'booking_date'   => $request->input('booking_date'),
             'total_price'    => $request->input('total_price'),
@@ -242,4 +243,5 @@ class BookingController extends Controller
         // 4. Redirect ไปหน้าต่อไป
         return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ #' . $booking->id);
     }
+
 }

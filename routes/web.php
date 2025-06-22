@@ -31,4 +31,6 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::post('/booking/confirm', [BookingController::class, 'confirm'])->name('booking.confirm');
 
     Route::post('/booking/store', [BookingController::class, 'store'])->name('booking.store');
+    Route::post('/booking/uploadSlip', [BookingController::class,'uploadSlip'])->name('booking.uploadSlip');
 });
+
