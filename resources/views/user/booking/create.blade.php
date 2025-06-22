@@ -145,8 +145,8 @@
 @endsection
 
 
-@push('scripts')
-<script>
+@section('scripts')
+   <script>
         // ตรวจสอบว่ามี session 'success' ถูกส่งกลับมาหรือไม่
         @if (session('success'))
             Swal.fire({
@@ -169,7 +169,7 @@
             });
         @endif
     </script>
-    {{-- JavaScript สำหรับสลับฟอร์ม --}}
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const bookingTypeSelect = document.getElementById('booking_type');
@@ -210,4 +210,6 @@
             toggleSections();
         });
     </script>
-@endpush
+    
+@endsection
+    
