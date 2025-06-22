@@ -304,32 +304,4 @@ class BookingController extends Controller
         return redirect()->route('user.dashboard')->with('success', 'อัปโหลดสลิปสำเร็จแล้ว รอการตรวจสอบจากเจ้าหน้าที่');
     }
 
-    /**
-     * ตรวจสอบว่าช่วงเวลาที่ร้องขอมานั้นว่างหรือไม่
-     */
-    public function checkAvailability(Request $request)
-    {
-        // 1. ตรวจสอบข้อมูลที่ส่งมา
-        $validated = $request->validate([
-            'field_type_id' => 'required|exists:field_types,id',
-            'booking_date'  => 'required|date',
-            'start_time'    => 'required|date_format:H:i',
-            'end_time'      => 'required|date_format:H:i|after:start_time',
-        ]);
-
-        // 2. ค้นหาการจองที่ "ซ้อนทับ" กับเวลาที่ขอมา
-        // เงื่อนไขการซ้อนทับคือ: (เวลาเริ่มของเรา < เวลาสิ้นสุดของเขา) AND (เวลาสิ้นสุดของเรา > เวลาเริ่มของเขา)
-        $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
-            ->where('booking_date', $validated['booking_date'])
-        // เพิ่มเงื่อนไขป้องกันการจองที่เสร็จสิ้นหรือยกเลิกไปแล้ว (ถ้ามี)
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->where('start_time', '<', $validated['end_time'])
-            ->where('end_time', '>', $validated['start_time'])
-            ->exists(); // ใช้ exists() เพื่อความเร็วสูงสุด แค่ต้องการรู้ว่ามีหรือไม่
-
-        // 3. ส่งผลลัพธ์กลับไปเป็น JSON
-        return response()->json([
-            'available' => ! $isBooked, // ถ้าเจอ ($isBooked=true) แปลว่าไม่ว่าง (available=false)
-        ]);
-    }
 }

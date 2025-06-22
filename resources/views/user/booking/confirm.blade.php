@@ -12,8 +12,9 @@
                         <hr>
                         <dl class="row summary-table gy-2">
                             @if (
-                                $summary['booking_inputs']['booking_type'] === 'hourly' ||
-                                    $summary['booking_inputs']['booking_type'] === 'membership')
+                                    $summary['booking_inputs']['booking_type'] === 'hourly' ||
+                                    $summary['booking_inputs']['booking_type'] === 'membership'
+                                )
                                 <dt class="col-5">สนาม</dt>
                                 <dd class="col-7">{{ $summary['field_name'] }}</dd>
                             @else
