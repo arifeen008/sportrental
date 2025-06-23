@@ -140,26 +140,44 @@ class BookingController extends Controller
             }
         }
 
-        // --- 5. ส่งข้อมูลสรุปกลับไป ---
+                                // 2. คำนวณส่วนลด
+        $discountAmount = 0;    // กำหนดค่าเริ่มต้นเป็น 0
+        $discountReason = null; // สำหรับแสดงเหตุผลของส่วนลด
+
+        // ตรวจสอบว่าจองตั้งแต่ 2 ชั่วโมงขึ้นไปหรือไม่
+        if ($durationInHours >= 2) {
+            $discountAmount = 100.00;
+            $discountReason = 'ส่วนลดเมื่อใช้บริการครบ 2 ชั่วโมง';
+        }
+
+        // 3. คำนวณราคาสุทธิ
+        $finalPrice = $totalPrice - $discountAmount;
+
+        // =================== END: ส่วนที่เพิ่มเข้ามาใหม่ ===================
+
+        // 4. ส่งข้อมูลสรุปกลับไป (เพิ่ม Key ใหม่เข้าไป)
         return [
             'title'                   => 'สรุปการจองรายชั่วโมง',
             'field_name'              => FieldType::find($fieldTypeId)->name,
             'booking_date'            => $bookingDate,
             'time_range'              => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
             'duration_in_hours'       => $durationInHours,
-            'price_breakdown_details' => $priceBreakdown, // ส่งรายละเอียดเป็น Array
-            'total_price'             => $totalPrice,
+            'subtotal_price'          => $totalPrice,     // <-- เพิ่มใหม่: ราคาเต็มก่อนลด
+            'discount_amount'         => $discountAmount, // <-- เพิ่มใหม่: ยอดส่วนลด
+            'discount_reason'         => $discountReason, // <-- เพิ่มใหม่: เหตุผลของส่วนลด
+            'total_price'             => $finalPrice,     // <-- อัปเดต: เป็นราคาสุทธิหลังลด
             'special_perks'           => null,
+            'price_breakdown_details' => $priceBreakdown,
         ];
+
     }
 
     private function calculatePackageRate(Request $request)
     {
         $packageName = $request->input('package_name');
-        $rentalType  = $request->input('rental_type'); // <-- รับค่าใหม่จากฟอร์ม
+        $rentalType  = $request->input('rental_type');
         $bookingDate = Carbon::parse($request->input('booking_date'));
 
-        // ใช้ $rentalType จากฟอร์มในการค้นหา ไม่ hardcode แล้ว
         $rate = PackageRate::where('package_name', $packageName)
             ->where('rental_type', $rentalType)
             ->first();
@@ -172,39 +190,48 @@ class BookingController extends Controller
         $overtimeCost    = 0;
         $overtimeDetails = 'ไม่มี';
 
+        // กำหนดเวลาเริ่มต้น-สิ้นสุดพื้นฐาน
+        $startTime = Carbon::parse($rate->base_start_time);
+        $endTime   = Carbon::parse($rate->base_end_time);
+
         if ($request->has('wants_overtime') && $request->input('wants_overtime') == '1') {
             $overtimeEndTime = Carbon::parse($request->input('overtime_end_time'));
-            $baseEndTime     = Carbon::parse($rate->base_end_time);
 
-            // ตรวจสอบว่าเวลา overtime ไม่เกินเวลาสูงสุดที่กำหนด
             if ($overtimeEndTime->gt(Carbon::parse($rate->overtime_max_end_time))) {
                 abort(400, 'ไม่สามารถจองล่วงเวลาเกิน ' . $rate->overtime_max_end_time);
             }
 
-            $overtimeHours   = $baseEndTime->diffInHours($overtimeEndTime);
+            $overtimeHours   = $startTime->diffInHours($overtimeEndTime) - 10; // หากเวลาพื้นฐานคือ 10 ชม. (8:00-18:00)
             $overtimeCost    = $overtimeHours * $rate->overtime_price_per_hour_per_field;
             $overtimeDetails = "{$overtimeHours} ชั่วโมง (ถึง {$overtimeEndTime->format('H:i')} น.)";
+
+            // อัปเดตเวลาสิ้นสุดเป็นเวลาล่วงเวลา
+            $endTime = $overtimeEndTime;
         }
 
         $totalPrice = $basePrice + $overtimeCost;
 
-        // =================== คำนวณค่ามัดจำและเงินประกัน ===================
+        // ================== ส่วนที่เพิ่มเข้ามาใหม่ ==================
+        // คำนวณจำนวนชั่วโมงทั้งหมดจากเวลาเริ่มต้นและสิ้นสุดสุดท้าย
+        $durationInHours = $startTime->diffInHours($endTime);
+        // =======================================================
+
         $depositAmount   = $totalPrice * 0.5;
         $securityDeposit = 2000.00;
-        // ===============================================================
 
         return [
-            'title'            => "สรุปการจองแบบเหมาวัน ({$rentalType})",
-            'package_name'     => $packageName,
-            'booking_date'     => $bookingDate,
-            'time_range'       => 'เต็มวัน (08:00 - 18:00)' . ($overtimeCost > 0 ? ' + ล่วงเวลา' : ''),
-            'base_price'       => $basePrice,
-            'overtime_cost'    => $overtimeCost,
-            'overtime_details' => $overtimeDetails,
-            'total_price'      => $totalPrice,
-            'special_perks'    => null,
-            'deposit_amount'   => $depositAmount,   // <-- ส่งค่ามัดจำ
-            'security_deposit' => $securityDeposit, // <-- ส่งค่าเงินประกัน
+            'title'             => "สรุปการจองแบบเหมาวัน ({$rentalType})",
+            'package_name'      => $packageName,
+            'booking_date'      => $bookingDate,
+            'time_range'        => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
+            'base_price'        => $basePrice,
+            'overtime_cost'     => $overtimeCost,
+            'overtime_details'  => $overtimeDetails,
+            'total_price'       => $totalPrice,
+            'duration_in_hours' => $durationInHours, // <-- เพิ่ม Key นี้เข้ามาใน return array
+            'deposit_amount'    => $depositAmount,
+            'security_deposit'  => $securityDeposit,
+            'special_perks'     => null,
         ];
     }
     private function calculateMembershipUsage(Request $request)
@@ -245,64 +272,63 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        // 1. เตรียมข้อมูลพื้นฐานที่จะบันทึกเหมือนกันทุกประเภท
+        // 1. เตรียมข้อมูลที่จะบันทึก โดยดึงจาก request ที่ส่งมาจากหน้า confirm
         $dataToSave = [
-            'user_id'        => Auth::id(),
-            'booking_type'   => $request->input('booking_type'),
-            'booking_date'   => $request->input('booking_date'),
-            'total_price'    => $request->input('total_price'),
-            'notes'          => $request->input('notes'),
-            'status'         => 'confirmed', // หรือ 'pending_payment'
-            'payment_status' => 'unpaid',
+            'user_id'           => Auth::id(),
+            'booking_type'      => $request->input('booking_type'),
+            'booking_date'      => $request->input('booking_date'),
+            'notes'             => $request->input('notes'),
+
+            // --- ส่วนข้อมูลใหม่ที่เราจะเก็บ ---
+            'duration_in_hours' => $request->input('duration_in_hours', 0),
+            'base_price'        => $request->input('base_price', 0),
+            'overtime_charges'  => $request->input('overtime_charges', 0),
+            'discount'          => $request->input('discount', 0),
+            'total_price'       => $request->input('total_price'),
+            'hours_deducted'    => $request->input('hours_deducted'),
+            // ----------------------------------
+
+            'status'            => 'confirmed',
+            'payment_status'    => 'unpaid',
         ];
 
-        // 2. จัดการข้อมูลที่แตกต่างกันตาม booking_type
+        // 2. เพิ่มข้อมูลเฉพาะตามประเภทการจอง (เหมือนเดิม)
         $bookingType = $request->input('booking_type');
-
         if ($bookingType === 'hourly' || $bookingType === 'membership') {
-            // สำหรับรายชั่วโมงและสมาชิก
-            $dataToSave['field_type_id']  = $request->input('field_type_id');
-            $dataToSave['start_time']     = $request->input('start_time');
-            $dataToSave['end_time']       = $request->input('end_time');
-            $dataToSave['hours_deducted'] = $request->input('hours_deducted', null);
+            $dataToSave['field_type_id'] = $request->input('field_type_id');
+            $dataToSave['start_time']    = $request->input('start_time');
+            $dataToSave['end_time']      = $request->input('end_time');
         } elseif ($bookingType === 'daily_package') {
-            // สำหรับเหมาวัน
             $packageRate = PackageRate::where('package_name', $request->input('package_name'))
                 ->where('rental_type', $request->input('rental_type'))
-                ->first();
+                ->firstOrFail();
 
-            // กำหนดเวลาเริ่มต้น-สิ้นสุดเองตามกฎของแพ็กเกจ
             $dataToSave['start_time'] = $packageRate->base_start_time;
-            $dataToSave['end_time']   = $packageRate->base_end_time;
+            $dataToSave['end_time']   = $request->has('wants_overtime') ? $request->input('overtime_end_time') : $packageRate->base_end_time;
 
-            // ถ้ามีการจองล่วงเวลา ให้ใช้เวลาสิ้นสุดของล่วงเวลา
-            if ($request->has('wants_overtime')) {
-                $dataToSave['end_time'] = $request->input('overtime_end_time');
-            }
-
-            // กรณี 'เหมา 2 สนาม' จะไม่บันทึก field_type_id
             if ($request->input('package_name') !== 'เหมา 2 สนาม') {
-                // ค้นหา field_type_id จากชื่อแพ็กเกจ (เช่น "สนามกลางแจ้ง")
                 $fieldType                   = FieldType::where('name', $request->input('package_name'))->first();
-                $dataToSave['field_type_id'] = $fieldType ? $fieldType->id : null;
+                $dataToSave['field_type_id'] = $fieldType->id ?? null;
             } else {
                 $dataToSave['field_type_id'] = null;
             }
 
-            // บันทึกรายละเอียดการคำนวณลง JSON
             $dataToSave['price_calculation_details'] = [
                 'rental_type'  => $request->input('rental_type'),
                 'package_name' => $request->input('package_name'),
             ];
         }
 
-        // 3. สร้าง Booking ด้วยข้อมูลที่คัดกรองและเตรียมไว้แล้ว
-        $booking               = Booking::create($dataToSave);
-        $bookingCode           = now()->format('ymd') . $booking->id;
+        // 3. สร้างการจองด้วยข้อมูลทั้งหมด
+        $booking = Booking::create($dataToSave);
+
+        // 4. สร้าง Booking Code (เหมือนเดิม)
+        $bookingCode           = now()->format('ymd') . '-' . $booking->id;
         $booking->booking_code = $bookingCode;
         $booking->save();
-        // 4. Redirect ไปหน้าต่อไป
-        return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ #' . $booking->booking_code);
+
+        // 5. Redirect กลับไปพร้อมข้อความ
+        return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ ' . $booking->booking_code);
     }
 
     /**

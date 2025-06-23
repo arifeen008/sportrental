@@ -17,9 +17,6 @@
                                 <h2 class="card-title text-primary mb-1">Admin Dashboard</h2>
                                 <p class="card-text text-muted">ยินดีต้อนรับ, {{ Auth::user()->name }}</p>
                             </div>
-                            <a href="{{ route('user.booking.create') }}" class="btn btn-success">
-                                <i class="fas fa-plus-circle me-2"></i> สร้างการจองใหม่
-                            </a>
                         </div>
                     </div>
                 </div>

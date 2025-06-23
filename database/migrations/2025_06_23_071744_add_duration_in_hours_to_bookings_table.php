@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('bookings', function (Blueprint $table) {
+            // เพิ่มคอลัมน์ integer สำหรับเก็บจำนวนชั่วโมง (สามารถเป็นค่าว่างได้)
+            // และให้ตำแหน่งอยู่หลังคอลัมน์ end_time
+            $table->integer('duration_in_hours')->nullable()->after('end_time');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('bookings', function (Blueprint $table) {
+            //
+        });
+    }
+};
