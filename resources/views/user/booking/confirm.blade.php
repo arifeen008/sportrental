@@ -12,9 +12,8 @@
                         <hr>
                         <dl class="row summary-table gy-2">
                             @if (
-                                    $summary['booking_inputs']['booking_type'] === 'hourly' ||
-                                    $summary['booking_inputs']['booking_type'] === 'membership'
-                                )
+                                $summary['booking_inputs']['booking_type'] === 'hourly' ||
+                                    $summary['booking_inputs']['booking_type'] === 'membership')
                                 <dt class="col-5">สนาม</dt>
                                 <dd class="col-7">{{ $summary['field_name'] }}</dd>
                             @else
@@ -23,7 +22,7 @@
                             @endif
 
                             <dt class="col-5">วันที่</dt>
-                            <dd class="col-7">{{ $summary['booking_date_formatted'] }}</dd>
+                            <dd class="col-7">{{ thaidate('วัน l j F พ.ศ. Y', $summary['booking_date']) }}</dd>
 
                             <dt class="col-5">เวลา</dt>
                             <dd class="col-7">{{ $summary['time_range'] }}</dd>

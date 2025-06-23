@@ -53,10 +53,10 @@
                                     @forelse ($bookings as $booking)
                                         <tr>
                                             {{-- รหัสการจอง --}}
-                                            <td>#{{ $booking->id }}</td>
+                                            <td>#{{ $booking->booking_code  }}</td>
 
                                             {{-- วันที่ใช้บริการ --}}
-                                            <td>{{ $booking->booking_date->format('d M Y') }}</td>
+                                            <td>{{ thaidate('j F Y', $booking->booking_date) }}</td>
 
                                             {{-- รายละเอียดการจอง --}}
                                             <td>
@@ -84,16 +84,17 @@
                                                     <span class="badge bg-warning text-dark">รอชำระเงิน</span>
                                                 @elseif($booking->payment_status == 'verifying')
                                                     <span class="badge bg-info">รอตรวจสอบ</span>
+                                                @elseif($booking->payment_status == 'rejected')
+                                                    <span class="badge bg-danger">ไม่อนุมัติ</span>
                                                 @else
                                                     <span class="badge bg-secondary">{{ $booking->payment_status }}</span>
                                                 @endif
                                             </td>
 
-                                            {{-- ปุ่มจัดการ (แสดงตามสถานะ) --}}
                                             <td class="text-center">
                                                 @if ($booking->payment_status == 'unpaid')
                                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                        data-bs-target="#uploadSlipModal-{{ $booking->id }}">
+                                                        data-bs-target="#uploadSlipModal-{{ $booking->booking_code  }}">
                                                         <i class="fas fa-upload me-1"></i> อัปโหลดสลิป
                                                     </button>
                                                 @else
@@ -104,7 +105,6 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        {{-- กรณีไม่พบข้อมูลการจองเลย --}}
                                         <tr>
                                             <td colspan="6" class="text-center text-muted py-4">คุณยังไม่มีประวัติการจอง
                                             </td>
@@ -123,7 +123,7 @@
     {{-- ================= ส่วน Modal สำหรับอัปโหลดสลิป ================= --}}
     {{-- จะวนลูปสร้าง Modal ตามจำนวน booking ที่ยังไม่จ่ายเงิน --}}
     @foreach ($bookings->where('payment_status', 'unpaid') as $booking)
-        <div class="modal fade" id="uploadSlipModal-{{ $booking->id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal fade" id="uploadSlipModal-{{ $booking->booking_code  }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     {{-- อย่าลืมเพิ่ม route สำหรับอัปโหลดสลิป --}}
@@ -131,16 +131,16 @@
                         enctype="multipart/form-data">
                         @csrf
                         <div class="modal-header">
-                            <h5 class="modal-title">อัปโหลดสลิปสำหรับ #{{ $booking->id }}</h5>
+                            <h5 class="modal-title">อัปโหลดสลิปสำหรับ #{{ $booking->booking_code  }}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <p>ยอดชำระ: <strong class="text-danger">{{ number_format($booking->total_price, 2) }}
                                     บาท</strong></p>
                             <div class="mb-3">
-                                <label for="slipImage-{{ $booking->id }}" class="form-label">เลือกไฟล์รูปภาพสลิป</label>
+                                <label for="slipImage-{{ $booking->booking_code  }}" class="form-label">เลือกไฟล์รูปภาพสลิป</label>
                                 <input class="form-control" type="file" name="slip_image"
-                                    id="slipImage-{{ $booking->id }}" required>
+                                    id="slipImage-{{ $booking->booking_code  }}" required>
                             </div>
                         </div>
                         <div class="modal-footer">

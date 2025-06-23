@@ -13,12 +13,13 @@
 @endpush
 
 @section('content')
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
+    <div class="container py-4">
+        <div class="row g-4">
+
+            <div class="col-lg-7">
+                <div class="card shadow-sm" id="booking_form_card">
                     <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0">ฟอร์มจองสนามฟุตบอล</h4>
+                        <h4 class="mb-0"><i class="fas fa-edit me-2"></i>ฟอร์มจองสนาม</h4>
                     </div>
                     <div class="card-body p-4">
 
@@ -140,13 +141,63 @@
                     </div>
                 </div>
             </div>
+
+            <div class="col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-check me-2"></i>
+                            ตารางการจองที่ยืนยันแล้ว
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>วันที่</th>
+                                        <th>เวลา</th>
+                                        <th>สนาม</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($confirmedBookings as $booking)
+                                        <tr>
+                                            <td>
+                                                {{ thaidate('วัน l', $booking->booking_date) }}<br>
+                                                {{ thaidate('j F Y', $booking->booking_date) }}
+                                            </td>
+                                            <td>{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
+                                                {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</td>
+                                            <td>
+                                                @if ($booking->booking_type === 'daily_package')
+                                                    {{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}
+                                                @else
+                                                    {{ $booking->fieldType->name ?? 'ไม่ระบุ' }}
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted p-4">
+                                                ยังไม่มีการจองที่ยืนยันแล้วในช่วงนี้
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 @endsection
 
 
 @section('scripts')
-   <script>
+    <script>
         // ตรวจสอบว่ามี session 'success' ถูกส่งกลับมาหรือไม่
         @if (session('success'))
             Swal.fire({
@@ -210,6 +261,4 @@
             toggleSections();
         });
     </script>
-    
 @endsection
-    

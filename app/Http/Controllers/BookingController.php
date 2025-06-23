@@ -14,11 +14,42 @@ class BookingController extends Controller
 {
     public function create()
     {
-        return view('user.booking.create');
+        // 1. ดึงข้อมูลการจองที่ "จ่ายเงินแล้ว" และเป็น "วันนี้เป็นต้นไป"
+        $confirmedBookings = Booking::where('payment_status', 'paid')
+            ->where('booking_date', '>=', now()->toDateString())
+            ->with('fieldType')              // โหลดข้อมูลสนามมาด้วย
+            ->orderBy('booking_date', 'asc') // เรียงตามวันที่
+            ->orderBy('start_time', 'asc')   // จากนั้นเรียงตามเวลา
+            ->get();
+        return view('user.booking.create', compact('confirmedBookings'));
     }
 
     public function confirm(Request $request)
     {
+        // 1. ตรวจสอบว่าเป็นวันจันทร์หรือไม่
+        // ใช้ Carbon เพื่อจัดการกับวันที่และเวลาได้ง่าย
+        $bookingDate = Carbon::parse($request->input('booking_date'));
+        if ($bookingDate->isMonday()) {
+            // ถ้าเป็นวันจันทร์ ให้ Redirect กลับไปหน้าเดิมพร้อม Error Message
+            return redirect()->back()
+                ->with('error', 'ขออภัย สนามปิดให้บริการทุกวันจันทร์')
+                ->withInput(); // withInput() จะช่วยกรอกข้อมูลที่ผู้ใช้เลือกไว้กลับไปในฟอร์มเหมือนเดิม
+        }
+
+        // 2. ตรวจสอบการจองคร่อมช่วงเวลา (สำหรับรายชั่วโมงและสมาชิก)
+        $bookingType = $request->input('booking_type');
+        if ($bookingType === 'hourly' || $bookingType === 'membership') {
+            $startTime    = $request->input('start_time');
+            $endTime      = $request->input('end_time');
+            $boundaryTime = '18:00:00';
+
+            // เช็คว่าเวลาเริ่มต้นอยู่ก่อน 18:00 และเวลาสิ้นสุดอยู่หลัง 18:00 หรือไม่
+            if ($startTime < $boundaryTime && $endTime > $boundaryTime) {
+                return redirect()->back()
+                    ->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้ กรุณาแยกทำ 2 รายการจอง')
+                    ->withInput();
+            }
+        }
         // ================== ส่วนที่เพิ่มเข้ามาใหม่ ==================
         // 1. ตรวจสอบสนามว่างก่อนคำนวณราคา
 
@@ -113,7 +144,7 @@ class BookingController extends Controller
         return [
             'title'                   => 'สรุปการจองรายชั่วโมง',
             'field_name'              => FieldType::find($fieldTypeId)->name,
-            'booking_date_formatted'  => $bookingDate->format('d/m/Y'),
+            'booking_date'            => $bookingDate,
             'time_range'              => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
             'duration_in_hours'       => $durationInHours,
             'price_breakdown_details' => $priceBreakdown, // ส่งรายละเอียดเป็น Array
@@ -163,24 +194,25 @@ class BookingController extends Controller
         // ===============================================================
 
         return [
-            'title'                  => "สรุปการจองแบบเหมาวัน ({$rentalType})",
-            'package_name'           => $packageName,
-            'booking_date_formatted' => $bookingDate->format('d/m/Y'),
-            'time_range'             => 'เต็มวัน (08:00 - 18:00)' . ($overtimeCost > 0 ? ' + ล่วงเวลา' : ''),
-            'base_price'             => $basePrice,
-            'overtime_cost'          => $overtimeCost,
-            'overtime_details'       => $overtimeDetails,
-            'total_price'            => $totalPrice,
-            'special_perks'          => null,
-            'deposit_amount'         => $depositAmount,   // <-- ส่งค่ามัดจำ
-            'security_deposit'       => $securityDeposit, // <-- ส่งค่าเงินประกัน
+            'title'            => "สรุปการจองแบบเหมาวัน ({$rentalType})",
+            'package_name'     => $packageName,
+            'booking_date'     => $bookingDate,
+            'time_range'       => 'เต็มวัน (08:00 - 18:00)' . ($overtimeCost > 0 ? ' + ล่วงเวลา' : ''),
+            'base_price'       => $basePrice,
+            'overtime_cost'    => $overtimeCost,
+            'overtime_details' => $overtimeDetails,
+            'total_price'      => $totalPrice,
+            'special_perks'    => null,
+            'deposit_amount'   => $depositAmount,   // <-- ส่งค่ามัดจำ
+            'security_deposit' => $securityDeposit, // <-- ส่งค่าเงินประกัน
         ];
     }
     private function calculateMembershipUsage(Request $request)
     {
-                                                                               // หมายเหตุ: Logic ส่วนนี้เป็นการจำลอง เพราะยังไม่มีระบบว่า User ถือบัตรสมาชิกใบไหน
-                                                                               // ในระบบจริง คุณต้อง Query หาบัตรสมาชิกที่ Active ของ User ที่ Login อยู่
-        $tier = MembershipTier::where('tier_name', 'VIP 20 ชม.')->first(); // สมมติว่าผู้ใช้เป็น VIP
+        // หมายเหตุ: Logic ส่วนนี้เป็นการจำลอง เพราะยังไม่มีระบบว่า User ถือบัตรสมาชิกใบไหน
+        // ในระบบจริง คุณต้อง Query หาบัตรสมาชิกที่ Active ของ User ที่ Login อยู่
+        $bookingDate = Carbon::parse($request->input('booking_date'));
+        $tier        = MembershipTier::where('tier_name', 'VIP 20 ชม.')->first(); // สมมติว่าผู้ใช้เป็น VIP
 
         $startTime = Carbon::parse($request->input('start_time'));
         $endTime   = Carbon::parse($request->input('end_time'));
@@ -195,13 +227,13 @@ class BookingController extends Controller
         }
 
         return [
-            'title'                  => 'สรุปการใช้สิทธิ์บัตรสมาชิก',
-            'field_name'             => FieldType::find($request->input('field_type_id'))->name,
-            'booking_date_formatted' => Carbon::parse($request->input('booking_date'))->format('d/m/Y'),
-            'time_range'             => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
-            'hours_to_deduct'        => $hoursToDeduct,
-            'total_price'            => 0, // การใช้บัตรสมาชิกไม่มีค่าใช้จ่าย แต่เป็นการหักชั่วโมง
-            'special_perks'          => $tier->special_perks,
+            'title'           => 'สรุปการใช้สิทธิ์บัตรสมาชิก',
+            'field_name'      => FieldType::find($request->input('field_type_id'))->name,
+            'booking_date'    => $bookingDate,
+            'time_range'      => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
+            'hours_to_deduct' => $hoursToDeduct,
+            'total_price'     => 0, // การใช้บัตรสมาชิกไม่มีค่าใช้จ่าย แต่เป็นการหักชั่วโมง
+            'special_perks'   => $tier->special_perks,
         ];
     }
 
@@ -215,7 +247,7 @@ class BookingController extends Controller
     {
         // 1. เตรียมข้อมูลพื้นฐานที่จะบันทึกเหมือนกันทุกประเภท
         $dataToSave = [
-            'user_id'        => Auth::id() ?? 1, // ในระบบจริงใช้ auth()->id()
+            'user_id'        => Auth::id(),
             'booking_type'   => $request->input('booking_type'),
             'booking_date'   => $request->input('booking_date'),
             'total_price'    => $request->input('total_price'),
@@ -265,10 +297,12 @@ class BookingController extends Controller
         }
 
         // 3. สร้าง Booking ด้วยข้อมูลที่คัดกรองและเตรียมไว้แล้ว
-        $booking = Booking::create($dataToSave);
-
+        $booking               = Booking::create($dataToSave);
+        $bookingCode           = now()->format('ymd') . $booking->id;
+        $booking->booking_code = $bookingCode;
+        $booking->save();
         // 4. Redirect ไปหน้าต่อไป
-        return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ #' . $booking->id);
+        return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ #' . $booking->booking_code);
     }
 
     /**
@@ -290,9 +324,12 @@ class BookingController extends Controller
             'slip_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        $file        = $request->file('slip_image');
+        $extension   = $file->getClientOriginalExtension();
+        $newFilename = now()->format('YmdHis') . $booking->booking_code . '.' . $extension;
         // 4. จัดเก็บไฟล์ - ยังคงเหมือนเดิม
         // บอกให้เก็บไฟล์ในโฟลเดอร์ 'slips' บน disk ที่ชื่อว่า 'public'
-        $path = $request->file('slip_image')->store('slips', 'public');
+        $path = $file->storeAs('slips', $newFilename, 'public');
 
         // 5. อัปเดตฐานข้อมูล - ยังคงเหมือนเดิม
         $booking->update([

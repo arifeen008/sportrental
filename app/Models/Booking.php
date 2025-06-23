@@ -9,10 +9,18 @@ class Booking extends Model
     use HasFactory;
 
     /**
-     * การตั้งค่านี้สำคัญมาก มันอนุญาตให้ทุกคอลัมน์ (รวมถึง user_id) ถูกบันทึกได้
+     * The attributes that aren't mass assignable.
+     * การตั้งค่านี้หมายถึง "อนุญาตให้กรอก/อัปเดตข้อมูลได้ทุกคอลัมน์ ยกเว้น id"
+     * ซึ่งจะแก้ปัญหาของเราได้ทันที และป้องกันปัญหาแบบเดียวกันในอนาคต
+     * @var array
      */
     protected $guarded = ['id'];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'booking_date'              => 'date',
         'price_calculation_details' => 'array',

@@ -20,7 +20,8 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
-    Route::post('/booking/approve', [AdminController::class,'aprove'])->name('booking.approve');
+    Route::post('/booking/{booking}/approve', [AdminController::class, 'approve'])->name('booking.approve');
+    Route::post('/booking/{booking}/reject', [AdminController::class, 'reject'])->name('booking.reject');
 });
 
 // user routes
@@ -33,5 +34,5 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::post('/booking/store', [BookingController::class, 'store'])->name('booking.store');
     Route::post('/bookings/{booking}/upload-slip', [BookingController::class, 'uploadSlip'])->name('booking.uploadSlip');
 
-});
 
+});

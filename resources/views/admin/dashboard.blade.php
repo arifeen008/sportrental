@@ -1,4 +1,4 @@
-@extends('layouts.app') {{-- หรือ Layout ของ Admin ที่คุณมี --}}
+@extends('layouts.app')
 
 @section('styles')
     {{-- เพิ่ม Font Awesome CDN สำหรับไอคอนสวยๆ --}}
@@ -32,59 +32,47 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header bg-warning">
                         <h5 class="mb-0 text-dark">
-                            <i class="fas fa-exclamation-triangle me-2"></i> การจองที่ต้องดำเนินการ (รอตรวจสอบสลิป)
+                            <i class="fas fa-exclamation-triangle me-2"></i> การจองที่ต้องดำเนินการ
+                            ({{ $bookings->where('payment_status', 'verifying')->count() }} รายการ)
                         </h5>
                     </div>
                     <div class="card-body">
-                        {{-- ส่วนนี้จะวนลูปเฉพาะการจองที่ 'รอตรวจสอบ' (verifying) --}}
-                        @if ($bookings->where('payment_status', 'verifying')->count() > 0)
-                            <ul class="list-group list-group-flush">
-                                @foreach ($bookings->where('payment_status', 'verifying') as $booking)
-                                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center">
-                                        <div>
-                                            <strong>#{{ $booking->id }} - {{ $booking->user->name }}</strong>
-                                            <small class="d-block text-muted">
-                                                วันที่ใช้บริการ: {{ $booking->booking_date->format('d/m/Y') }} | ยอดเงิน:
-                                                {{ number_format($booking->total_price, 2) }} บาท
-                                            </small>
-                                        </div>
-                                        <div class="mt-2 mt-md-0">
-                                            @if ($booking->payment_status === 'verifying')
-                                                <div class="d-flex justify-content-center gap-2">
-                                                    {{-- ปุ่มสำหรับเปิด Modal ดูสลิป --}}
-                                                    <button type="button" class="btn btn-sm btn-info"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#viewSlipModal-{{ $booking->id }}">
-                                                        <i class="fas fa-receipt me-1"></i> ดูสลิป
-                                                    </button>
-
-                                                    {{-- ฟอร์มสำหรับส่งคำสั่ง 'อนุมัติ' (เหมือนเดิม) --}}
-                                                    <form action="{{ route('admin.booking.approve', $booking->id) }}"
-                                                        method="POST" class="d-inline"
-                                                        onsubmit="return confirm('ยืนยันการอนุมัติการจอง #{{ $booking->id }}?');">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-success">
-                                                            <i class="fas fa-check-circle me-1"></i> อนุมัติ
-                                                        </button>
-                                                    </form>
-
-                                                    {{-- อาจจะมีปุ่มปฏิเสธ --}}
-                                                    <button class="btn btn-sm btn-danger">ปฏิเสธ</button>
-                                                </div>
-                                            @elseif($booking->payment_status === 'paid')
-                                                <span class="text-success fw-bold">การจองสมบูรณ์</span>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <div class="alert alert-success text-center" role="alert">
+                        @forelse($bookings->where('payment_status', 'verifying') as $booking)
+                            <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center p-3">
+                                <div>
+                                    <strong>#{{ $booking->booking_code  }} - {{ $booking->user->name }}</strong>
+                                    <small class="d-block text-muted">
+                                        วันที่ใช้บริการ: {{ $booking->booking_date->format('d/m/Y') }} | ยอดเงิน:
+                                        {{ number_format($booking->total_price, 2) }} บาท
+                                    </small>
+                                </div>
+                                <div class="mt-2 mt-md-0 d-flex justify-content-end gap-2">
+                                    {{-- ปุ่มสำหรับเปิด Modal ดูสลิป --}}
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                        data-bs-target="#viewSlipModal-{{ $booking->booking_code  }}" title="ดูสลิป">
+                                        <i class="fas fa-receipt"></i> ดูสลิป
+                                    </button>
+                                    {{-- ฟอร์มสำหรับส่งคำสั่ง 'อนุมัติ' --}}
+                                    <form action="{{ route('admin.booking.approve', $booking) }}" method="POST"
+                                        class="d-inline"
+                                        onsubmit="return confirm('ยืนยันการอนุมัติการจอง #{{ $booking->booking_code  }}?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success" title="อนุมัติ">
+                                            <i class="fas fa-check"></i> อนุมัติ
+                                        </button>
+                                    </form>
+                                    {{-- เพิ่ม: ปุ่มสำหรับเปิด Modal ปฏิเสธการจอง --}}
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                        data-bs-target="#rejectModal-{{ $booking->booking_code  }}" title="ปฏิเสธ">
+                                        <i class="fas fa-times"></i> ปฏิเสธ
+                                    </button>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="alert alert-success text-center mb-0" role="alert">
                                 ไม่มีรายการที่ต้องดำเนินการในขณะนี้
                             </div>
-                        @endif
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -105,7 +93,7 @@
                                         <th>รหัส</th>
                                         <th>ผู้จอง</th>
                                         <th>วันที่ใช้บริการ</th>
-                                        <th>รายการ</th>
+                                        <th>รายการ</th> {{-- แก้ไข: เพิ่มข้อมูลส่วนนี้ --}}
                                         <th class="text-end">ยอดชำระ</th>
                                         <th class="text-center">สถานะ</th>
                                     </tr>
@@ -113,31 +101,21 @@
                                 <tbody>
                                     @forelse ($bookings as $booking)
                                         <tr>
-                                            <td>#{{ $booking->id }}</td>
+                                            <td>#{{ $booking->booking_code  }}</td>
                                             <td>{{ $booking->user->name }}</td>
                                             <td>{{ $booking->booking_date->format('d M Y') }}</td>
                                             <td>
+                                                {{-- แก้ไข: เพิ่มการแสดงผลรายละเอียด --}}
                                                 @if ($booking->booking_type === 'daily_package')
-                                                    {{-- กรณีเป็นการจองแบบเหมาวัน --}}
-                                                    {{-- ดึงชื่อแพ็กเกจจากข้อมูลที่เก็บเป็น JSON --}}
-                                                    <strong>{{ $booking->price_calculation_details['package_name'] ?? 'แพ็กเกจเหมาวัน' }}</strong>
-
-                                                    {{-- แสดงประเภทงาน (การกุศล/แข่งขัน) ถ้ามี --}}
-                                                    @if (isset($booking->price_calculation_details['rental_type']))
-                                                        <small
-                                                            class="d-block text-muted">{{ $booking->price_calculation_details['rental_type'] }}</small>
-                                                    @endif
+                                                    <strong>{{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}</strong>
+                                                    <small
+                                                        class="d-block text-muted">{{ $booking->price_calculation_details['rental_type'] ?? '' }}</small>
                                                 @else
-                                                    {{-- กรณีเป็นการจองรายชั่วโมง หรือใช้บัตรสมาชิก --}}
-
-                                                    {{-- แสดงชื่อสนาม (เช็คก่อนว่ามีข้อมูลหรือไม่) --}}
                                                     <strong>{{ $booking->fieldType->name ?? 'ไม่ระบุสนาม' }}</strong>
-
-                                                    {{-- แสดงเวลาที่จอง โดยจัดรูปแบบให้สวยงาม --}}
-                                                    <small class="d-block text-muted">
-                                                        {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
-                                                        {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }} น.
-                                                    </small>
+                                                    <small
+                                                        class="d-block text-muted">{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }}
+                                                        - {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}
+                                                        น.</small>
                                                 @endif
                                             </td>
                                             <td class="text-end">{{ number_format($booking->total_price, 2) }}</td>
@@ -148,6 +126,8 @@
                                                     <span class="badge bg-secondary">ยังไม่ชำระเงิน</span>
                                                 @elseif($booking->payment_status == 'verifying')
                                                     <span class="badge bg-warning text-dark">รอตรวจสอบ</span>
+                                                @elseif($booking->payment_status == 'rejected')
+                                                    <span class="badge bg-danger">ถูกปฏิเสธ</span>
                                                 @else
                                                     <span class="badge bg-dark">{{ $booking->payment_status }}</span>
                                                 @endif
@@ -164,38 +144,91 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        {{-- แสดงตัวแบ่งหน้า --}}
                         {{ $bookings->links() }}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {{-- ================= ส่วน Modal สำหรับดูสลิป ================= --}}
-    {{-- จะวนลูปสร้าง Modal ตามจำนวน booking ที่ 'รอตรวจสอบ' --}}
+
+    {{-- ================= ส่วน Modals (แสดงสลิป และ ปฏิเสธ) ================= --}}
     @foreach ($bookings->where('payment_status', 'verifying') as $booking)
-        <div class="modal fade" id="viewSlipModal-{{ $booking->id }}" tabindex="-1"
-            aria-labelledby="slipModalLabel-{{ $booking->id }}" aria-hidden="true">
+        {{-- Modal สำหรับดูสลิป --}}
+        <div class="modal fade" id="viewSlipModal-{{ $booking->booking_code  }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="slipModalLabel-{{ $booking->id }}">สลิปการโอนเงินสำหรับการจอง
-                            #{{ $booking->id }}</h5>
+                        <h5 class="modal-title">สลิปสำหรับการจอง #{{ $booking->booking_code  }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body text-center">
                         @if ($booking->slip_image_path)
-                            {{-- แสดงรูปภาพสลิป --}}
                             <img src="{{ Storage::url($booking->slip_image_path) }}" class="img-fluid" alt="Payment Slip">
                         @else
                             <p class="text-danger">ไม่พบไฟล์สลิป</p>
                         @endif
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
-                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Modal สำหรับปฏิเสธการจอง --}}
+        <div class="modal fade" id="rejectModal-{{ $booking->booking_code  }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="{{ route('admin.booking.reject', $booking) }}" method="POST">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title">ปฏิเสธการจอง #{{ $booking->booking_code  }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="rejection_reason-{{ $booking->booking_code  }}"
+                                    class="form-label">กรุณาระบุเหตุผลที่ปฏิเสธ:</label>
+                                <textarea class="form-control" name="rejection_reason" id="rejection_reason-{{ $booking->booking_code  }}" rows="3"
+                                    required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                            <button type="submit" class="btn btn-danger">ยืนยันการปฏิเสธ</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     @endforeach
+@endsection
+@section('scripts')
+    <script>
+        // ตรวจสอบว่ามี session 'success' หรือไม่
+        @if (session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: '{{ session('success') }}',
+                timer: 3000, // แสดงผล 3 วินาทีแล้วหายไป
+                showConfirmButton: false
+            });
+        @endif
+
+        // ตรวจสอบว่ามี session 'error' หรือไม่
+        @if (session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด!',
+                text: '{{ session('error') }}'
+            });
+        @endif
+
+        // ตรวจสอบว่ามี session 'warning' หรือไม่
+        @if (session('warning'))
+            Swal.fire({
+                icon: 'warning',
+                title: 'คำเตือน',
+                text: '{{ session('warning') }}'
+            });
+        @endif
+    </script>
 @endsection
