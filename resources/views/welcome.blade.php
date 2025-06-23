@@ -134,7 +134,7 @@
                 <ul class="list-unstyled">
                     <li class="mb-2"><i class="fas fa-map-marker-alt fa-fw me-2"></i>47 หมู่ 7 ตำบลคลองยาง อำเภอเกาะลันตา
                         จังหวัดกระบี่ 81120 </li>
-                    <li class="mb-2"><i class="fas fa-phone fa-fw me-2"></i> 081-234-5678</li>
+                    <li class="mb-2"><i class="fas fa-phone fa-fw me-2"></i> 0864706113</li>
                     <li class="mb-2"><i class="fab fa-line fa-fw me-2"></i> @skfstadium</li>
                     <li class="mb-2"><i class="fas fa-clock fa-fw me-2"></i> เปิดบริการทุกวัน 09:00 - 22:00 น.
                         (หยุดวันจันทร์)</li>
