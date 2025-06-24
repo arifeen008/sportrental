@@ -380,7 +380,7 @@ class BookingController extends Controller
 
         $file        = $request->file('slip_image');
         $extension   = $file->getClientOriginalExtension();
-        $newFilename = now()->format('YmdHis') . $booking->booking_code . '.' . $extension;
+        $newFilename = now()->format('Ymd') . $booking->booking_code . '.' . $extension;
         // 4. จัดเก็บไฟล์ - ยังคงเหมือนเดิม
         // บอกให้เก็บไฟล์ในโฟลเดอร์ 'slips' บน disk ที่ชื่อว่า 'public'
         $path = $file->storeAs('slips', $newFilename, 'public');
