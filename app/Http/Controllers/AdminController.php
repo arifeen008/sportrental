@@ -10,26 +10,40 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
-    /**
-     * แสดงหน้า Admin Dashboard
-     */
+    // ใน AdminDashboardController.php
     public function index()
     {
+        // ดึงข้อมูลสำหรับ Widgets
+        $bookingsTodayCount       = Booking::whereDate('booking_date', today())->count();
+        $pendingVerificationCount = Booking::where('payment_status', 'verifying')->count();
+        $monthlyRevenue           = Booking::where('payment_status', 'paid')->whereMonth('created_at', now()->month)->sum('total_price');
 
-        $bookings = Booking::with(['user', 'fieldType'])
-            ->orderByRaw("
-                CASE
-                    WHEN payment_status = 'verifying' THEN 1
-                    WHEN payment_status = 'unpaid' THEN 2
-                    WHEN payment_status = 'paid' THEN 3
-                    ELSE 4
-                END
-            ")
+        // ดึงข้อมูลการจองที่ต้องจัดการ
+        $actionRequiredBookings = Booking::where('payment_status', 'verifying')->with(['user', 'fieldType'])->latest()->get();
 
-            ->latest('booking_date')
-            ->paginate(15);
+        // เตรียมข้อมูลสำหรับ Chart.js (7 วันล่าสุด)
+        $chartData = Booking::where('booking_date', '>=', now()->subDays(6)->startOfDay())
+            ->selectRaw('DATE(booking_date) as date, COUNT(*) as count')
+            ->groupBy('date')->orderBy('date', 'asc')->get();
 
-        return view('admin.dashboard', compact('bookings'));
+        // สร้าง Label และ Value สำหรับ Chart ให้ครบ 7 วัน
+        $chartLabels = [];
+        $chartValues = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date          = today()->subDays($i);
+            $chartLabels[] = thaidate('D j', $date);
+            $bookingData   = $chartData->firstWhere('date', $date->format('Y-m-d'));
+            $chartValues[] = $bookingData ? $bookingData->count : 0;
+        }
+
+        return view('admin.dashboard', [
+            'bookingsTodayCount'       => $bookingsTodayCount,
+            'pendingVerificationCount' => $pendingVerificationCount,
+            'monthlyRevenue'           => $monthlyRevenue,
+            'actionRequiredBookings'   => $actionRequiredBookings,
+            'chartLabels'              => $chartLabels,
+            'chartValues'              => $chartValues,
+        ]);
     }
 
     // รับ $booking ที่ถูกหาเจอโดยอัตโนมัติ
@@ -39,7 +53,7 @@ class AdminController extends Controller
         $booking->status         = 'confirmed';
         $booking->save();
 
-        return redirect()->route('admin.dashboard')->with('success', 'อนุมัติการจอง #' . $booking->booking_code  . ' เรียบร้อยแล้ว');
+        return redirect()->route('admin.dashboard')->with('success', 'อนุมัติการจอง #' . $booking->booking_code . ' เรียบร้อยแล้ว');
     }
 
     // รับ $booking ที่ถูกหาเจอโดยอัตโนมัติ
@@ -52,7 +66,7 @@ class AdminController extends Controller
         $booking->rejection_reason = $request->input('rejection_reason');
         $booking->save();
 
-        return redirect()->route('admin.dashboard')->with('success', 'ปฏิเสธการจอง #' . $booking->booking_code  . ' เรียบร้อยแล้ว');
+        return redirect()->route('admin.dashboard')->with('success', 'ปฏิเสธการจอง #' . $booking->booking_code . ' เรียบร้อยแล้ว');
     }
 
 }

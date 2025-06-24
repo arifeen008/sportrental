@@ -1,82 +1,91 @@
 @extends('layouts.app')
 
-{{-- เพิ่ม Font Awesome CDN สำหรับไอคอนสวยๆ --}}
 @section('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <style>
+        .booking-card .status-badge {
+            font-size: 0.9rem;
+        }
+    </style>
 @endsection
 
 
 @section('content')
     <div class="container py-4">
-        {{-- ส่วนต้อนรับและปุ่มจอง --}}
-        <div class="row justify-content-center">
-            <div class="col-md-10">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body text-center">
-                        <h2 class="card-title text-primary mb-3">สวัสดี, {{ Auth::user()->name }}!</h2>
-                        <p class="card-text lead">ยินดีต้อนรับสู่แดชบอร์ดส่วนตัวของคุณ</p>
-                        <hr>
-                        <div class="d-grid gap-2 col-md-6 mx-auto">
-                            <a href="{{ route('user.booking.create') }}" class="btn btn-success btn-lg">
-                                <i class="fas fa-plus-circle me-2"></i> ทำการจองใหม่
-                            </a>
-                        </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h4">สวัสดี, {{ Auth::user()->name }}!</h2>
+                        <p class="text-muted mb-0">ยินดีต้อนรับสู่แดชบอร์ดของคุณ</p>
+                    </div>
+                    <div class="mt-3 mt-md-0">
+                        <a href="{{ route('user.create.hourly') }}" class="btn btn-primary"><i
+                                class="fas fa-plus-circle me-2"></i>จองสนามรายชั่วโมง</a>
+                        <a href="{{ route('user.create.package') }}" class="btn btn-info"><i
+                                class="fas fa-calendar-day me-2"></i>จองแบบเหมาวัน</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- ส่วนตารางประวัติการจอง --}}
-        <div class="row mt-2">
-            <div class="col-md-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-history me-2"></i> ประวัติการจองทั้งหมด
-                        </h5>
+        <div class="row g-4">
+            <div class="col-lg-8">
+                @if ($activeMembership)
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="far fa-id-card me-2"></i> บัตรสมาชิกของคุณ</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-2">
+                                <dt class="col-sm-4">ประเภทบัตร:</dt>
+                                <dd class="col-sm-8">{{ $activeMembership->membershipTier->tier_name }}</dd>
+                                <dt class="col-sm-4">ชั่วโมงคงเหลือ:</dt>
+                                <dd class="col-sm-8 fw-bold fs-5 text-primary">
+                                    {{ number_format($activeMembership->remaining_hours, 2) }} ชม.</dd>
+                                <dt class="col-sm-4">วันหมดอายุ:</dt>
+                                <dd class="col-sm-8">{{ thaidate('j F Y', $activeMembership->expires_at) }}</dd>
+                            </dl>
+                            <a href="{{ route('user.create.membership') }}" class="btn btn-success w-100">
+                                <i class="fas fa-calendar-plus me-2"></i> จองสนามด้วยบัตรนี้
+                            </a>
+                        </div>
                     </div>
-                    <div class="card-body">
+                @endif
+
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle">
+                            <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>รหัสจอง</th>
+                                        <th>รหัสการจอง</th>
                                         <th>วันที่ใช้บริการ</th>
-                                        <th>รายการ</th>
-                                        <th class="text-end">ยอดชำระ</th>
+                                        <th>รายละเอียด</th>
+                                        <th class="text-end">ยอดชำระ (บาท)</th>
                                         <th class="text-center">สถานะ</th>
                                         <th class="text-center">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {{-- ตรวจสอบว่ามีข้อมูลการจองหรือไม่ --}}
-                                    @forelse ($bookings as $booking)
+                                    @forelse ($myBookings as $booking)
                                         <tr>
-                                            {{-- รหัสการจอง --}}
-                                            <td>#{{ $booking->booking_code  }}</td>
-
-                                            {{-- วันที่ใช้บริการ --}}
-                                            <td>{{ thaidate('j F Y', $booking->booking_date) }}</td>
-
-                                            {{-- รายละเอียดการจอง --}}
+                                            <td><strong>{{ $booking->booking_code }}</strong></td>
+                                            <td>{{ thaidate('j M Y', $booking->booking_date) }}</td>
                                             <td>
                                                 @if ($booking->booking_type === 'daily_package')
-                                                    {{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}
+                                                    <strong>{{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}</strong>
                                                     <small
                                                         class="d-block text-muted">{{ $booking->price_calculation_details['rental_type'] ?? '' }}</small>
                                                 @else
-                                                    {{ $booking->fieldType->name ?? 'N/A' }}
+                                                    <strong>{{ optional($booking->fieldType)->name ?? 'ไม่ระบุ' }}</strong>
                                                     <small class="d-block text-muted">
                                                         {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
                                                         {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }} น.
                                                     </small>
                                                 @endif
                                             </td>
-
-                                            {{-- ยอดชำระ --}}
                                             <td class="text-end">{{ number_format($booking->total_price, 2) }}</td>
-
-                                            {{-- สถานะ (แสดงด้วย Badge สีต่างๆ) --}}
                                             <td class="text-center">
                                                 @if ($booking->payment_status == 'paid')
                                                     <span class="badge bg-success">ชำระเงินแล้ว</span>
@@ -85,28 +94,27 @@
                                                 @elseif($booking->payment_status == 'verifying')
                                                     <span class="badge bg-info">รอตรวจสอบ</span>
                                                 @elseif($booking->payment_status == 'rejected')
-                                                    <span class="badge bg-danger">ไม่อนุมัติ</span>
+                                                    <span class="badge bg-danger">ถูกปฏิเสธ</span>
                                                 @else
                                                     <span class="badge bg-secondary">{{ $booking->payment_status }}</span>
                                                 @endif
                                             </td>
-
                                             <td class="text-center">
                                                 @if ($booking->payment_status == 'unpaid')
                                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                        data-bs-target="#uploadSlipModal-{{ $booking->booking_code  }}">
-                                                        <i class="fas fa-upload me-1"></i> อัปโหลดสลิป
+                                                        data-bs-target="#uploadSlipModal-{{ $booking->id }}">
+                                                        <i class="fas fa-upload me-1"></i> แจ้งชำระเงิน
                                                     </button>
                                                 @else
-                                                    <a href="#" class="btn btn-sm btn-outline-secondary">
-                                                        <i class="fas fa-eye me-1"></i> ดูรายละเอียด
-                                                    </a>
+                                                    <a href="#" class="btn btn-sm btn-outline-secondary disabled"
+                                                        aria-disabled="true">รายละเอียด</a>
                                                 @endif
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted py-4">คุณยังไม่มีประวัติการจอง
+                                            <td colspan="6" class="text-center text-muted py-5">
+                                                <p class="mb-0">คุณยังไม่มีประวัติการจอง</p>
                                             </td>
                                         </tr>
                                     @endforelse
@@ -114,38 +122,101 @@
                             </table>
                         </div>
                     </div>
+                    @if ($myBookings->hasPages())
+                        <div class="card-footer">
+                            {{ $myBookings->links() }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-calendar-check text-success me-2"></i>
+                            ตารางจองที่ยืนยันแล้ว (7 วันข้างหน้า)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if ($confirmedBookings->isEmpty())
+                            <div class="text-center p-4 text-muted">
+                                <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                <p>ยังไม่มีการจองที่ยืนยันแล้วในช่วงนี้</p>
+                            </div>
+                        @else
+                            <ul class="list-group list-group-flush">
+                                @foreach ($confirmedBookings as $booking)
+                                    <li class="list-group-item px-0 py-3">
+                                        <div class="d-flex w-100">
+                                            <div class="text-center me-3" style="width: 65px;">
+                                                <div class="bg-light rounded p-1 border">
+                                                    <span
+                                                        class="d-block small text-danger fw-bold">{{ thaidate('M', $booking->booking_date) }}</span>
+                                                    <span class="d-block h4 mb-0">{{ $booking->booking_date->day }}</span>
+                                                    <span
+                                                        class="d-block small text-muted">{{ thaidate('D', $booking->booking_date) }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">
+                                                    @if ($booking->booking_type === 'daily_package')
+                                                        <i class="fas fa-sun text-warning me-1"></i>
+                                                        {{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}
+                                                    @else
+                                                        <i class="fas fa-futbol text-primary me-1"></i>
+                                                        {{ optional($booking->fieldType)->name ?? 'ไม่ระบุ' }}
+                                                    @endif
+                                                </h6>
+                                                <small class="text-muted">
+                                                    <i class="far fa-clock"></i>
+                                                    {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
+                                                    {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }} น.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
 
-    {{-- ================= ส่วน Modal สำหรับอัปโหลดสลิป ================= --}}
-    {{-- จะวนลูปสร้าง Modal ตามจำนวน booking ที่ยังไม่จ่ายเงิน --}}
-    @foreach ($bookings->where('payment_status', 'unpaid') as $booking)
-        <div class="modal fade" id="uploadSlipModal-{{ $booking->booking_code  }}" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
+    @foreach ($myBookings->where('payment_status', 'unpaid') as $booking)
+        <div class="modal fade" id="uploadSlipModal-{{ $booking->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-                    {{-- อย่าลืมเพิ่ม route สำหรับอัปโหลดสลิป --}}
-                    <form action="{{ route('user.booking.uploadSlip', $booking->id) }}" method="POST"
+                    <form action="{{ route('user.booking.uploadSlip', $booking) }}" method="POST"
                         enctype="multipart/form-data">
                         @csrf
                         <div class="modal-header">
-                            <h5 class="modal-title">อัปโหลดสลิปสำหรับ #{{ $booking->booking_code  }}</h5>
+                            <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i>แจ้งชำระเงินสำหรับ:
+                                {{ $booking->booking_code }}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p>ยอดชำระ: <strong class="text-danger">{{ number_format($booking->total_price, 2) }}
-                                    บาท</strong></p>
+                            <div class="alert alert-info">
+                                <p class="mb-1">ยอดที่ต้องชำระ: <strong
+                                        class="fs-5">{{ number_format($booking->total_price, 2) }} บาท</strong></p>
+                                <p class="small mb-0">โอนเงินมาที่: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามปะกาสัย)</p>
+                            </div>
+                            <div class="text-center mb-3">
+                                <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป"
+                                    class="img-fluid rounded" style="max-height: 200px; display: none;">
+                            </div>
                             <div class="mb-3">
-                                <label for="slipImage-{{ $booking->booking_code  }}" class="form-label">เลือกไฟล์รูปภาพสลิป</label>
+                                <label for="slipImage-{{ $booking->id }}" class="form-label">เลือกไฟล์รูปภาพสลิป</label>
                                 <input class="form-control" type="file" name="slip_image"
-                                    id="slipImage-{{ $booking->booking_code  }}" required>
+                                    id="slipImage-{{ $booking->id }}" required onchange="previewSlip(event)">
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
-                            <button type="submit" class="btn btn-primary">ยืนยันการอัปโหลด</button>
+                            <button type="submit" class="btn btn-primary">ยืนยันการแจ้งชำระเงิน</button>
                         </div>
                     </form>
                 </div>
@@ -153,6 +224,22 @@
         </div>
     @endforeach
 @endsection
+@push('scripts')
+    <script>
+        function previewSlip(event) {
+            const bookingId = event.target.id.split('-')[1];
+            const previewImage = document.getElementById('slip-preview-' + bookingId);
+            if (event.target.files && event.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                }
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        }
+    </script>
+@endpush
 @section('scripts')
     <script>
         // ตรวจสอบว่ามี session 'success' หรือไม่

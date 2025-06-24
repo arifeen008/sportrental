@@ -66,4 +66,10 @@ class User extends Authenticatable
         return $this->role === 'user'; // ตรวจจาก field ที่ใช้จริง
     }
 
+    public function userMemberships()
+    {
+        // User 1 คน มีได้หลาย Memberships (hasMany)
+        return $this->hasMany(UserMembership::class);
+    }
+
 }

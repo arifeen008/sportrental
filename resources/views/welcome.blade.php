@@ -27,7 +27,7 @@
             <h1 class="display-3 fw-bold">SKF STADIUM SPORT CLUB</h1>
             <p class="lead col-lg-8 mx-auto">สนามฟุตบอลหญ้าเทียมมาตรฐาน บริการครบวงจร
                 พร้อมเปิดประสบการณ์การเล่นฟุตบอลที่ดีที่สุดสำหรับคุณ</p>
-            <a href="{{ route('user.booking.create') }}" class="btn btn-primary btn-lg mt-3 px-5 py-3 fw-bold">
+            <a href="{{ route('user.create.hourly') }}" class="btn btn-primary btn-lg mt-3 px-5 py-3 fw-bold">
                 <i class="fas fa-calendar-check me-2"></i> จองสนามเลย!
             </a>
         </div>
@@ -67,8 +67,8 @@
                             <h5 class="card-title">สนามกลางแจ้ง</h5>
                             <p class="card-text">สัมผัสบรรยากาศการเล่นฟุตบอลแบบ Open-air บนพื้นหญ้าเทียมมาตรฐาน
                                 พร้อมระบบไฟส่องสว่างสำหรับช่วงเวลากลางคืน</p>
-                            <a href="{{ route('user.booking.create') }}"
-                                class="btn btn-outline-primary">ดูรายละเอียดและจอง</a>
+                            {{-- <a href="{{ route('user.booking.create') }}"
+                                class="btn btn-outline-primary">ดูรายละเอียดและจอง</a> --}}
                         </div>
                     </div>
                 </div>
@@ -81,8 +81,8 @@
                             <h5 class="card-title">สนามในร่ม (มีหลังคา)</h5>
                             <p class="card-text">ไม่ต้องกังวลกับสภาพอากาศ เล่นได้ทุกเวลา แดดไม่ร้อน ฝนไม่เปียก
                                 เหมาะสำหรับการแข่งขันและเล่นกับเพื่อนฝูง</p>
-                            <a href="{{ route('user.booking.create') }}"
-                                class="btn btn-outline-primary">ดูรายละเอียดและจอง</a>
+                            {{-- <a href="{{ route('user.booking.create') }}"
+                                class="btn btn-outline-primary">ดูรายละเอียดและจอง</a> --}}
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,6 @@
                 </ul>
             </div>
             <div class="col-md-6">
-                {{-- วางโค้ด Embed ของ Google Map ที่นี่ --}}
                 <iframe
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d869.4077309369442!2d99.08944055827!3d7.810541283461214!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3051fbba7bc981ef%3A0xbea056ee4ac4e1b9!2sSouthern%20football%20club%20Klongyang!5e1!3m2!1sth!2sth!4v1750664691950!5m2!1sth!2sth"
                     width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"
