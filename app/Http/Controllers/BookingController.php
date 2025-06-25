@@ -12,9 +12,11 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class BookingController extends Controller
 {
+
     public function createHourly()
     {
         $confirmedBookings = Booking::where('payment_status', 'paid')
@@ -113,6 +115,138 @@ class BookingController extends Controller
         }
 
         return view('user.booking.confirm', compact('summary'));
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            // ใช้ Transaction เพื่อให้แน่ใจว่าถ้ามีขั้นตอนไหนพลาด จะยกเลิกทั้งหมด
+            $booking = DB::transaction(function () use ($request) {
+                // 1. เตรียมข้อมูลที่จะบันทึก
+                $dataToSave = [
+                    'user_id'            => Auth::id(),
+                    'booking_type'       => $request->input('booking_type'),
+                    'booking_date'       => $request->input('booking_date'),
+                    'notes'              => $request->input('notes'),
+                    'base_price'         => $request->input('base_price', 0),
+                    'overtime_charges'   => $request->input('overtime_charges', 0),
+                    'discount'           => $request->input('discount', 0),
+                    'total_price'        => $request->input('total_price'),
+                    'duration_in_hours'  => $request->input('duration_in_hours', 0),
+                    'hours_deducted'     => $request->input('hours_deducted'),
+                    'user_membership_id' => $request->input('user_membership_id'),
+                    'status'             => 'confirmed',
+                    'payment_status'     => 'unpaid',
+                ];
+
+                if ($request->input('booking_type') === 'hourly' || $request->input('booking_type') === 'membership') {
+                    $dataToSave['field_type_id'] = $request->input('field_type_id');
+                    $dataToSave['start_time']    = $request->input('start_time');
+                    $dataToSave['end_time']      = $request->input('end_time');
+                } elseif ($request->input('booking_type') === 'daily_package') {
+                    $packageRate = PackageRate::where('package_name', $request->input('package_name'))
+                        ->where('rental_type', $request->input('rental_type'))
+                        ->firstOrFail();
+                    $dataToSave['start_time'] = $packageRate->base_start_time;
+                    $dataToSave['end_time']   = $request->has('wants_overtime') ? $request->input('overtime_end_time') : $packageRate->base_end_time;
+                    if ($request->input('package_name') !== 'เหมา 2 สนาม') {
+                        $fieldType                   = FieldType::where('name', $request->input('package_name'))->first();
+                        $dataToSave['field_type_id'] = $fieldType->id ?? null;
+                    } else {
+                        $dataToSave['field_type_id'] = null;
+                    }
+                    $dataToSave['price_calculation_details'] = ['rental_type' => $request->input('rental_type'), 'package_name' => $request->input('package_name')];
+                }
+
+                // 2. สร้างการจอง
+                $booking = Booking::create($dataToSave);
+
+                // 3. สร้าง Booking Code
+                $booking->booking_code = now()->format('ymd') . '-' . $booking->id;
+                $booking->save();
+
+                // 4. ถ้าเป็นการใช้บัตรสมาชิก ให้หักชั่วโมง
+                if ($booking->booking_type === 'membership') {
+                    $membership = UserMembership::find($booking->user_membership_id);
+                    if ($membership) {
+                        $membership->remaining_hours -= $booking->hours_deducted;
+                        if ($membership->remaining_hours <= 0) {
+                            $membership->status = 'used_up';
+                        }
+                        $membership->save();
+                    }
+                }
+                return $booking;
+            });
+
+            // บรรทัดสุดท้าย: ส่งผู้ใช้ไปที่หน้า dashboard
+            return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ ' . $booking->booking_code);
+
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการบันทึกการจอง: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * รับไฟล์สลิปที่อัปโหลด, จัดเก็บ, และอัปเดตสถานะการจอง
+     */
+    public function uploadSlip(Request $request, $id)
+    {
+        // 1. ค้นหาการจองด้วยตัวเองโดยใช้ id ที่รับเข้ามา
+        // findOrFail จะค้นหาข้อมูล ถ้าไม่เจอจะแสดงหน้า 404 โดยอัตโนมัติ
+        $booking = Booking::findOrFail($id);
+
+        // 2. ตรวจสอบสิทธิ์ (Authorization) - ยังคงเหมือนเดิม
+        if ($booking->user_id !== Auth::id()) {
+            abort(403, 'คุณไม่มีสิทธิ์ในการดำเนินการนี้');
+        }
+
+        // 3. ตรวจสอบข้อมูล (Validation) - ยังคงเหมือนเดิม
+        $request->validate([
+            'slip_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        $file        = $request->file('slip_image');
+        $extension   = $file->getClientOriginalExtension();
+        $newFilename = now()->format('Ymd') . $booking->booking_code . '.' . $extension;
+        // 4. จัดเก็บไฟล์ - ยังคงเหมือนเดิม
+        // บอกให้เก็บไฟล์ในโฟลเดอร์ 'slips' บน disk ที่ชื่อว่า 'public'
+        $path = $file->storeAs('slips', $newFilename, 'public');
+
+        // 5. อัปเดตฐานข้อมูล - ยังคงเหมือนเดิม
+        $booking->update([
+            'slip_image_path' => $path,
+            'payment_status'  => 'verifying',
+        ]);
+
+        $this->pushMessageToGroup($request); // ส่งข้อความแจ้งเตือนผ่าน LINE Notify
+
+        // 6. ส่งกลับไปหน้า Dashboard พร้อมข้อความแจ้งเตือน - ยังคงเหมือนเดิม
+        return redirect()->route('user.dashboard')->with('success', 'อัปโหลดสลิปสำเร็จแล้ว รอการตรวจสอบจากเจ้าหน้าที่');
+    }
+
+    public function createMembershipBooking()
+    {
+        // 1. ตรวจสอบหาบัตรสมาชิกที่ใช้งานได้ของผู้ใช้
+        $activeMembership = UserMembership::where('user_id', Auth::id())
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->where('remaining_hours', '>', 0)
+            ->with('membershipTier')
+            ->first();
+
+        // 2. ถ้าไม่พบบัตร ให้เด้งกลับไปหน้า Dashboard พร้อมข้อความแจ้งเตือน
+        if (! $activeMembership) {
+            return redirect()->route('dashboard')->with('error', 'คุณยังไม่มีบัตรสมาชิกที่สามารถใช้งานได้');
+        }
+
+        // 3. ดึงข้อมูลการจองอื่นๆ ที่จำเป็น (เหมือนเดิม)
+        $confirmedBookings = Booking::where('payment_status', 'paid')
+            ->where('booking_date', '>=', now()->toDateString())
+            ->with('fieldType')->orderBy('booking_date')->orderBy('start_time')->get();
+
+        // 4. ส่งข้อมูลทั้งหมดไปที่ View ใหม่
+        return view('user.booking.membership_create', compact('activeMembership', 'confirmedBookings'));
     }
 
     private function calculateHourlyRate(Request $request)
@@ -251,36 +385,48 @@ class BookingController extends Controller
     }
     private function calculateMembershipUsage(Request $request)
     {
-        // หมายเหตุ: Logic ส่วนนี้เป็นการจำลอง เพราะยังไม่มีระบบว่า User ถือบัตรสมาชิกใบไหน
-        // ในระบบจริง คุณต้อง Query หาบัตรสมาชิกที่ Active ของ User ที่ Login อยู่
         $bookingDate = Carbon::parse($request->input('booking_date'));
-        $tier        = MembershipTier::where('tier_name', 'VIP 20 ชม.')->first(); // สมมติว่าผู้ใช้เป็น VIP
 
-        $startTime = Carbon::parse($request->input('start_time'));
-        $endTime   = Carbon::parse($request->input('end_time'));
+        // 1. ดึงข้อมูลบัตรสมาชิกที่ Active อยู่ของผู้ใช้
+        $membership = UserMembership::where('user_id', Auth::id())
+            ->where('status', 'active')->where('expires_at', '>', now())
+            ->with('membershipTier')->first();
 
+        if (! $membership) {
+            throw new Exception('ไม่พบบัตรสมาชิกที่สามารถใช้งานได้');
+        }
+
+        $tier            = $membership->membershipTier;
+        $startTime       = Carbon::parse($request->input('start_time'));
+        $endTime         = Carbon::parse($request->input('end_time'));
+        $durationInHours = $startTime->diffInHours($endTime);
+
+        // 2. คำนวณชั่วโมงที่จะถูกหัก
         $hoursToDeduct = 0;
         for ($time = $startTime->copy(); $time < $endTime; $time->addHour()) {
-            if ($time->hour >= 18) { // เวลา 18:00 เป็นต้นไปคือ Overtime
+            if ($time->hour >= 18) {
                 $hoursToDeduct += $tier->overtime_hour_multiplier;
             } else {
                 $hoursToDeduct += 1;
             }
         }
 
-        return [
-            'title'           => 'สรุปการใช้สิทธิ์บัตรสมาชิก',
-            'field_name'      => FieldType::find($request->input('field_type_id'))->name,
-            'booking_date'    => $bookingDate,
-            'time_range'      => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
-            'hours_to_deduct' => $hoursToDeduct,
-            'total_price'     => 0, // การใช้บัตรสมาชิกไม่มีค่าใช้จ่าย แต่เป็นการหักชั่วโมง
-            'special_perks'   => $tier->special_perks,
-        ];
+        // 3. ตรวจสอบว่าชั่วโมงคงเหลือเพียงพอหรือไม่
+        if ($membership->remaining_hours < $hoursToDeduct) {
+            throw new Exception('ชั่วโมงในบัตรสมาชิกของคุณไม่เพียงพอ (ต้องการ ' . $hoursToDeduct . ' ชม. แต่เหลือ ' . $membership->remaining_hours . ' ชม.)');
+        }
 
-        // if ($membership->remaining_hours < $hoursToDeduct) {
-        //      throw new Exception('ชั่วโมงในบัตรสมาชิกของคุณไม่เพียงพอ (ต้องการ ' . $hoursToDeduct . ' ชม. แต่เหลือ ' . $membership->remaining_hours . ' ชม.)');
-        // }
+        return [
+            'title'              => 'สรุปการใช้สิทธิ์บัตรสมาชิก',
+            'field_name'         => FieldType::find($request->input('field_type_id'))->name,
+            'booking_date'       => $bookingDate,
+            'time_range'         => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
+            'duration_in_hours'  => $durationInHours,
+            'hours_to_deduTct'   => $hoursToDeduct,
+            'user_membership_id' => $membership->id,
+            'total_price'        => 0,
+            'special_perks'      => $tier->special_perks,
+        ];
     }
 
     private function getThaiDayOfWeek(Carbon $date)
@@ -289,134 +435,39 @@ class BookingController extends Controller
         return $days[$date->dayOfWeek];
     }
 
-    public function store(Request $request)
+    private function pushMessageToGroup(Request $request)
     {
-        try {
-            // ใช้ Transaction เพื่อให้แน่ใจว่าถ้ามีขั้นตอนไหนพลาด จะยกเลิกทั้งหมด
-            $booking = DB::transaction(function () use ($request) {
-                // 1. เตรียมข้อมูลที่จะบันทึก
-                $dataToSave = [
-                    'user_id'            => Auth::id(),
-                    'booking_type'       => $request->input('booking_type'),
-                    'booking_date'       => $request->input('booking_date'),
-                    'notes'              => $request->input('notes'),
-                    'base_price'         => $request->input('base_price', 0),
-                    'overtime_charges'   => $request->input('overtime_charges', 0),
-                    'discount'           => $request->input('discount', 0),
-                    'total_price'        => $request->input('total_price'),
-                    'duration_in_hours'  => $request->input('duration_in_hours', 0),
-                    'hours_deducted'     => $request->input('hours_deducted'),
-                    'user_membership_id' => $request->input('user_membership_id'),
-                    'status'             => 'confirmed',
-                    'payment_status'     => 'unpaid',
-                ];
 
-                if ($request->input('booking_type') === 'hourly' || $request->input('booking_type') === 'membership') {
-                    $dataToSave['field_type_id'] = $request->input('field_type_id');
-                    $dataToSave['start_time']    = $request->input('start_time');
-                    $dataToSave['end_time']      = $request->input('end_time');
-                } elseif ($request->input('booking_type') === 'daily_package') {
-                    $packageRate = PackageRate::where('package_name', $request->input('package_name'))
-                        ->where('rental_type', $request->input('rental_type'))
-                        ->firstOrFail();
-                    $dataToSave['start_time'] = $packageRate->base_start_time;
-                    $dataToSave['end_time']   = $request->has('wants_overtime') ? $request->input('overtime_end_time') : $packageRate->base_end_time;
-                    if ($request->input('package_name') !== 'เหมา 2 สนาม') {
-                        $fieldType                   = FieldType::where('name', $request->input('package_name'))->first();
-                        $dataToSave['field_type_id'] = $fieldType->id ?? null;
-                    } else {
-                        $dataToSave['field_type_id'] = null;
-                    }
-                    $dataToSave['price_calculation_details'] = ['rental_type' => $request->input('rental_type'), 'package_name' => $request->input('package_name')];
-                }
+        $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU='; // Channel Access Token
+        $groupId     = 'C8828a7ce6dd1f2f1d9ad3638489c6e9d';
+        $message     = $request->input('message', 'ทดสอบข้อความจาก Laravel');
 
-                // 2. สร้างการจอง
-                $booking = Booking::create($dataToSave);
+        // เตรียม payload
+        $body = [
+            'to'       => $groupId,
+            'messages' => [
+                [
+                    'type' => 'text',
+                    'text' => $message,
+                ],
+            ],
+        ];
 
-                // 3. สร้าง Booking Code
-                $booking->booking_code = now()->format('ymd') . '-' . $booking->id;
-                $booking->save();
+        // เรียก API
+        $response = Http::withHeaders([
+            'Content-Type'  => 'application/json',
+            'Authorization' => 'Bearer ' . $accessToken,
+        ])->post('https://api.line.me/v2/bot/message/push', $body);
 
-                // 4. ถ้าเป็นการใช้บัตรสมาชิก ให้หักชั่วโมง
-                if ($booking->booking_type === 'membership') {
-                    $membership = UserMembership::find($booking->user_membership_id);
-                    if ($membership) {
-                        $membership->remaining_hours -= $booking->hours_deducted;
-                        if ($membership->remaining_hours <= 0) {
-                            $membership->status = 'used_up';
-                        }
-                        $membership->save();
-                    }
-                }
-                return $booking;
-            });
-
-            // บรรทัดสุดท้าย: ส่งผู้ใช้ไปที่หน้า dashboard
-            return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ ' . $booking->booking_code);
-
-        } catch (Exception $e) {
-            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการบันทึกการจอง: ' . $e->getMessage());
+        // ตรวจสอบผลลัพธ์
+        if ($response->successful()) {
+            return response()->json(['status' => 'success', 'message' => 'ส่งข้อความสำเร็จ']);
+        } else {
+            return response()->json([
+                'status'   => 'error',
+                'response' => $response->body(),
+            ], 500);
         }
-    }
-
-    /**
-     * รับไฟล์สลิปที่อัปโหลด, จัดเก็บ, และอัปเดตสถานะการจอง
-     */
-    public function uploadSlip(Request $request, $id)
-    {
-        // 1. ค้นหาการจองด้วยตัวเองโดยใช้ id ที่รับเข้ามา
-        // findOrFail จะค้นหาข้อมูล ถ้าไม่เจอจะแสดงหน้า 404 โดยอัตโนมัติ
-        $booking = Booking::findOrFail($id);
-
-        // 2. ตรวจสอบสิทธิ์ (Authorization) - ยังคงเหมือนเดิม
-        if ($booking->user_id !== Auth::id()) {
-            abort(403, 'คุณไม่มีสิทธิ์ในการดำเนินการนี้');
-        }
-
-        // 3. ตรวจสอบข้อมูล (Validation) - ยังคงเหมือนเดิม
-        $request->validate([
-            'slip_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        $file        = $request->file('slip_image');
-        $extension   = $file->getClientOriginalExtension();
-        $newFilename = now()->format('Ymd') . $booking->booking_code . '.' . $extension;
-        // 4. จัดเก็บไฟล์ - ยังคงเหมือนเดิม
-        // บอกให้เก็บไฟล์ในโฟลเดอร์ 'slips' บน disk ที่ชื่อว่า 'public'
-        $path = $file->storeAs('slips', $newFilename, 'public');
-
-        // 5. อัปเดตฐานข้อมูล - ยังคงเหมือนเดิม
-        $booking->update([
-            'slip_image_path' => $path,
-            'payment_status'  => 'verifying',
-        ]);
-
-        // 6. ส่งกลับไปหน้า Dashboard พร้อมข้อความแจ้งเตือน - ยังคงเหมือนเดิม
-        return redirect()->route('user.dashboard')->with('success', 'อัปโหลดสลิปสำเร็จแล้ว รอการตรวจสอบจากเจ้าหน้าที่');
-    }
-
-    public function createMembershipBooking()
-    {
-        // 1. ตรวจสอบหาบัตรสมาชิกที่ใช้งานได้ของผู้ใช้
-        $activeMembership = UserMembership::where('user_id', Auth::id())
-            ->where('status', 'active')
-            ->where('expires_at', '>', now())
-            ->where('remaining_hours', '>', 0)
-            ->with('membershipTier')
-            ->first();
-
-        // 2. ถ้าไม่พบบัตร ให้เด้งกลับไปหน้า Dashboard พร้อมข้อความแจ้งเตือน
-        if (! $activeMembership) {
-            return redirect()->route('dashboard')->with('error', 'คุณยังไม่มีบัตรสมาชิกที่สามารถใช้งานได้');
-        }
-
-        // 3. ดึงข้อมูลการจองอื่นๆ ที่จำเป็น (เหมือนเดิม)
-        $confirmedBookings = Booking::where('payment_status', 'paid')
-            ->where('booking_date', '>=', now()->toDateString())
-            ->with('fieldType')->orderBy('booking_date')->orderBy('start_time')->get();
-
-        // 4. ส่งข้อมูลทั้งหมดไปที่ View ใหม่
-        return view('user.booking.membership_create', compact('activeMembership', 'confirmedBookings'));
     }
 
 }

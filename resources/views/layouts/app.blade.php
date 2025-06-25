@@ -10,66 +10,72 @@
     <title>@yield('title', default: 'ระบบเช่าสนามกีฬา')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     @yield('styles')
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark w-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">My App</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            {{-- Brand Logo/Name --}}
+            <a class="navbar-brand" href="{{ url('/') }}">
+                <i class="fas fa-futbol me-2"></i>
+                SKF STADIUM
+            </a>
+
+            {{-- Responsive Toggle Button --}}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+                aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    @auth
-                        <li class="nav-item">
-                            @if (Auth::user()->isAdmin())
-                                <a class="nav-link {{ Request::routeIs('admin.dashboard') ? 'active' : '' }}"
-                                    href="{{ route('admin.dashboard') }}">Admin Dashboard</a>
-                            @else
-                                <a class="nav-link {{ Request::routeIs('user.dashboard') ? 'active' : '' }}"
-                                    href="{{ route('user.dashboard') }}">User Dashboard</a>
-                                <div class="dropdown">
-                                    <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
-                                        <strong>{{ Auth::user()->name }}</strong>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        {{-- เพิ่มลิงก์นี้เข้าไป --}}
-                                        <li><a class="dropdown-item"
-                                                href="{{ route('user.profile.edit') }}">แก้ไขข้อมูลส่วนตัว</a></li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-                                        <li>
-                                            <form method="POST" action="{{ route('logout') }}">
-                                                @csrf
-                                                <a class="dropdown-item" href="{{ route('logout') }}"
-                                                    onclick="event.preventDefault(); this.closest('form').submit();">ออกจากระบบ</a>
-                                            </form>
-                                        </li>
-                                    </ul>
-                                </div>
-                            @endif
-                        </li>
 
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+
+                    @guest
                         <li class="nav-item">
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="nav-link btn btn-link text-decoration-none">Logout</button>
-                            </form>
-                        </li>
-                    @else
-                        <li class="nav-item">
-                            <a class="nav-link {{ Request::routeIs('login') ? 'active' : '' }}"
-                                href="{{ route('login') }}">Login</a>
+                            <a class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}"
+                                href="{{ route('login') }}">เข้าสู่ระบบ</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ Request::routeIs('register') ? 'active' : '' }}"
-                                href="{{ route('register') }}">Register</a>
+                            <a class="nav-link {{ request()->routeIs('register') ? 'active' : '' }}"
+                                href="{{ route('register') }}">สมัครสมาชิก</a>
+                        </li>
+                    @endguest
+
+                    @auth
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i>
+                                {{ Auth::user()->name }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                                @if (Auth::user()->role == 'admin')
+                                    <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">Admin Dashboard</a>
+                                    </li>
+                                @else
+                                    <li><a class="dropdown-item" href="{{ route('user.dashboard') }}">แดชบอร์ดของฉัน</a></li>
+                                @endif
+
+                                <li><a class="dropdown-item" href="{{ route('user.profile.edit') }}">แก้ไขข้อมูลส่วนตัว</a></li>
+
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <a class="dropdown-item" href="{{ route('logout') }}"
+                                            onclick="event.preventDefault(); this.closest('form').submit();">
+                                            <i class="fas fa-sign-out-alt fa-fw me-2"></i>ออกจากระบบ
+                                        </a>
+                                    </form>
+                                </li>
+                            </ul>
                         </li>
                     @endauth
+
                 </ul>
             </div>
         </div>

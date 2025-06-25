@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Services\LineNotifyService;
 
 Route::get('/', function () {
     return view('welcome');
@@ -56,3 +57,4 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::put('/profile/password', [UserController::class, 'updatePassword'])->name('password.update');
 
 });
+
