@@ -50,7 +50,9 @@
                         <div class="mt-3 text-center">
                             <p>Don't have an account? <a href="{{ route('register') }}">Register here</a></p>
                         </div>
-
+                        <a href="{{ route('password.request') }}">
+                            ลืมรหัสผ่าน?
+                        </a>
                     </div>
                 </div>
 

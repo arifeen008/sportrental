@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
-    <title>@yield('title', default: 'ระบบเช่าสนามกีฬา')</title>
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
+    
+    <title><?php echo $__env->yieldContent('title', default: 'ระบบเช่าสนามกีฬา'); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    @yield('styles')
+    <?php echo $__env->yieldContent('styles'); ?>
 </head>
 
 <body>
@@ -23,64 +23,65 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    @auth
+                    <?php if(auth()->guard()->check()): ?>
                         <li class="nav-item">
-                            @if (Auth::user()->isAdmin())
-                                <a class="nav-link {{ Request::routeIs('admin.dashboard') ? 'active' : '' }}"
-                                    href="{{ route('admin.dashboard') }}">Admin Dashboard</a>
-                            @else
-                                <a class="nav-link {{ Request::routeIs('user.dashboard') ? 'active' : '' }}"
-                                    href="{{ route('user.dashboard') }}">User Dashboard</a>
+                            <?php if(Auth::user()->isAdmin()): ?>
+                                <a class="nav-link <?php echo e(Request::routeIs('admin.dashboard') ? 'active' : ''); ?>"
+                                    href="<?php echo e(route('admin.dashboard')); ?>">Admin Dashboard</a>
+                            <?php else: ?>
+                                <a class="nav-link <?php echo e(Request::routeIs('user.dashboard') ? 'active' : ''); ?>"
+                                    href="<?php echo e(route('user.dashboard')); ?>">User Dashboard</a>
                                 <div class="dropdown">
                                     <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
-                                        <strong>{{ Auth::user()->name }}</strong>
+                                        <strong><?php echo e(Auth::user()->name); ?></strong>
                                     </a>
                                     <ul class="dropdown-menu">
-                                        {{-- เพิ่มลิงก์นี้เข้าไป --}}
+                                        
                                         <li><a class="dropdown-item"
-                                                href="{{ route('user.profile.edit') }}">แก้ไขข้อมูลส่วนตัว</a></li>
+                                                href="<?php echo e(route('user.profile.edit')); ?>">แก้ไขข้อมูลส่วนตัว</a></li>
                                         <li>
                                             <hr class="dropdown-divider">
                                         </li>
                                         <li>
-                                            <form method="POST" action="{{ route('logout') }}">
-                                                @csrf
-                                                <a class="dropdown-item" href="{{ route('logout') }}"
+                                            <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                                <?php echo csrf_field(); ?>
+                                                <a class="dropdown-item" href="<?php echo e(route('logout')); ?>"
                                                     onclick="event.preventDefault(); this.closest('form').submit();">ออกจากระบบ</a>
                                             </form>
                                         </li>
                                     </ul>
                                 </div>
-                            @endif
+                            <?php endif; ?>
                         </li>
 
                         <li class="nav-item">
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
+                            <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                <?php echo csrf_field(); ?>
                                 <button type="submit" class="nav-link btn btn-link text-decoration-none">Logout</button>
                             </form>
                         </li>
-                    @else
+                    <?php else: ?>
                         <li class="nav-item">
-                            <a class="nav-link {{ Request::routeIs('login') ? 'active' : '' }}"
-                                href="{{ route('login') }}">Login</a>
+                            <a class="nav-link <?php echo e(Request::routeIs('login') ? 'active' : ''); ?>"
+                                href="<?php echo e(route('login')); ?>">Login</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ Request::routeIs('register') ? 'active' : '' }}"
-                                href="{{ route('register') }}">Register</a>
+                            <a class="nav-link <?php echo e(Request::routeIs('register') ? 'active' : ''); ?>"
+                                href="<?php echo e(route('register')); ?>">Register</a>
                         </li>
-                    @endauth
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
     </nav>
     <div class="container">
-        @yield('content')
+        <?php echo $__env->yieldContent('content'); ?>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    @stack('scripts')
-    @yield('scripts')
+    <?php echo $__env->yieldPushContent('scripts'); ?>
+    <?php echo $__env->yieldContent('scripts'); ?>
 </body>
 
 </html>
+<?php /**PATH C:\xampp\htdocs\sportsrental\resources\views/layouts/app.blade.php ENDPATH**/ ?>
