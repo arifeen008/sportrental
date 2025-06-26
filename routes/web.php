@@ -34,6 +34,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/memberships', [UserMembershipController::class, 'index'])->name('memberships.index');
     Route::get('/memberships/create', [UserMembershipController::class, 'create'])->name('memberships.create');
     Route::post('/memberships', [UserMembershipController::class, 'store'])->name('memberships.store');
+
+    Route::get('/bookings', [AdminController::class, 'listAllBookings'])->name('booking.index');
+    Route::get('/bookings/{booking}', [AdminController::class, 'show'])->name('booking.show');
 });
 
 // user routes

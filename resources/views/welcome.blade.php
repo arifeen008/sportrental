@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('styles')
+@push('styles')
     {{-- เพิ่ม Font Awesome CDN สำหรับไอคอนสวยๆ --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <style>
@@ -20,7 +20,7 @@
             color: var(--bs-primary);
         }
     </style>
-@endsection
+@endpush
 @section('content')
     <div class="hero-section d-flex align-items-center justify-content-center text-center">
         <div class="container">
@@ -62,7 +62,6 @@
                     <div class="card shadow-sm h-100">
                         <img src="{{ asset('images/DSC06291_0.jpg') }}" class="card-img-top" alt="สนามกลางแจ้ง"
                             height="250" style="object-fit: cover;">
-                        {{-- <--- เปลี่ยนเป็นรูปสนามกลางแจ้งของคุณ --}}
                         <div class="card-body">
                             <h5 class="card-title">สนามกลางแจ้ง</h5>
                             <p class="card-text">สัมผัสบรรยากาศการเล่นฟุตบอลแบบ Open-air บนพื้นหญ้าเทียมมาตรฐาน
@@ -76,7 +75,6 @@
                     <div class="card shadow-sm h-100">
                         <img src="{{ asset('images/DSC06293_0.jpg') }}" class="card-img-top" alt="สนามหลังคา" height="250"
                             style="object-fit: cover;">
-                        {{-- <--- เปลี่ยนเป็นรูปสนามหลังคาของคุณ --}}
                         <div class="card-body">
                             <h5 class="card-title">สนามในร่ม (มีหลังคา)</h5>
                             <p class="card-text">ไม่ต้องกังวลกับสภาพอากาศ เล่นได้ทุกเวลา แดดไม่ร้อน ฝนไม่เปียก

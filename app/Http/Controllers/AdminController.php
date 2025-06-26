@@ -69,4 +69,22 @@ class AdminController extends Controller
         return redirect()->route('admin.dashboard')->with('success', 'ปฏิเสธการจอง #' . $booking->booking_code . ' เรียบร้อยแล้ว');
     }
 
+    /**
+     * แสดงหน้าประวัติการจองทั้งหมด พร้อมการแบ่งหน้า
+     */
+    public function listAllBookings()
+    {
+        $bookings = Booking::with(['user', 'fieldType'])->latest()->paginate(20); 
+        return view('admin.bookings.index', compact('bookings'));
+    }
+
+/**
+ * แสดงหน้ารายละเอียดของการจองที่ระบุ
+ */
+    public function show(Booking $booking)
+    {
+        $booking->load(['user', 'fieldType']);
+        return view('admin.bookings.show', compact('booking'));
+    }
+
 }
