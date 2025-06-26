@@ -1,20 +1,26 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\admin\UserMembershipController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Models\Post;
 
 Route::get('/', function () {
-    return view('welcome');
+    $latestPosts = Post::where('status', 'published')
+        ->latest('published_at')
+        ->take(3)
+        ->get();
+    return view('welcome', compact('latestPosts'));
 });
 // Routes สำหรับการล็อกอิน
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
+Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
 Route::middleware('guest')->group(function () {
     Route::get('forgot-password', [AuthController::class, 'showLinkRequestForm'])->name('password.request');
     Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -37,6 +43,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/bookings', [AdminController::class, 'listAllBookings'])->name('booking.index');
     Route::get('/bookings/{booking}', [AdminController::class, 'show'])->name('booking.show');
+    Route::resource('posts', PostController::class);
 });
 
 // user routes

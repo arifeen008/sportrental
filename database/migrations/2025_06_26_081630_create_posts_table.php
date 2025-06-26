@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('posts', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('content');
+            $table->string('cover_image_path')->nullable();   // สำหรับเก็บที่อยู่ของรูปภาพ
+            $table->string('status')->default('draft'); // draft, published
+            $table->timestamp('published_at')->nullable();
+            $table->foreignId('user_id')->constrained('users'); // ID ของ Admin ที่สร้างโพสต์นี้
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('posts');
+    }
+};

@@ -73,8 +73,15 @@
                 </a>
             </li>
             <li class="nav-item mb-1">
-                <a href="{{ route('admin.memberships.index') }}" class="nav-link text-white {{ request()->routeIs('admin.memberships.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.memberships.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('admin.memberships.*') ? 'active' : '' }}">
                     <i class="fas fa-users fa-fw me-2"></i> ข้อมูลสมาชิก
+                </a>
+            </li>
+            <li class="nav-item mb-1">
+                <a href="{{ route('admin.posts.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('admin.posts.*') ? 'active' : '' }}">
+                    <i class="fas fa-newspaper fa-fw me-2"></i> จัดการข่าวสาร
                 </a>
             </li>
         </ul>
@@ -90,7 +97,8 @@
                     <hr class="dropdown-divider">
                 </li>
                 <li>
-                    <form method="POST" action="{{ route('logout') }}">@csrf<a class="dropdown-item" href="#" onclick="event.preventDefault();this.closest('form').submit();">ออกจากระบบ</a></form>
+                    <form method="POST" action="{{ route('logout') }}">@csrf<a class="dropdown-item" href="#"
+                            onclick="event.preventDefault();this.closest('form').submit();">ออกจากระบบ</a></form>
                 </li>
             </ul>
         </div>
