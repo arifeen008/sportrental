@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
@@ -192,39 +193,53 @@ class BookingController extends Controller
      */
     public function uploadSlip(Request $request, $id)
     {
-        // 1. ค้นหาการจองด้วยตัวเองโดยใช้ id ที่รับเข้ามา
-        // findOrFail จะค้นหาข้อมูล ถ้าไม่เจอจะแสดงหน้า 404 โดยอัตโนมัติ
-        $booking = Booking::findOrFail($id);
+        // 1. ค้นหาการจองพร้อมกับข้อมูลผู้ใช้ (Eager Loading)
+        $booking = Booking::with(['user', 'fieldType'])->findOrFail($id);
 
-        // 2. ตรวจสอบสิทธิ์ (Authorization) - ยังคงเหมือนเดิม
+        // 2. ตรวจสอบสิทธิ์
         if ($booking->user_id !== Auth::id()) {
             abort(403, 'คุณไม่มีสิทธิ์ในการดำเนินการนี้');
         }
 
-        // 3. ตรวจสอบข้อมูล (Validation) - ยังคงเหมือนเดิม
+        // 3. ตรวจสอบข้อมูล
         $request->validate([
             'slip_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $file        = $request->file('slip_image');
-        $extension   = $file->getClientOriginalExtension();
-        $newFilename = now()->format('Ymd') . $booking->booking_code . '.' . $extension;
-        // 4. จัดเก็บไฟล์ - ยังคงเหมือนเดิม
-        // บอกให้เก็บไฟล์ในโฟลเดอร์ 'slips' บน disk ที่ชื่อว่า 'public'
-        $path = $file->storeAs('slips', $newFilename, 'public');
+        // 4. สร้างชื่อและจัดเก็บไฟล์
+        $file      = $request->file('slip_image');
+        $extension = $file->getClientOriginalExtension();
+        // แก้ไข: ใช้ booking_code เพื่อให้แน่ใจว่าไม่ซ้ำกับ ID อื่นๆ
+        $newFilename = now()->format('YmdHis') . $booking->booking_code . '.' . $extension;
+        $path        = $file->storeAs('slips', $newFilename, 'public');
 
-        // 5. อัปเดตฐานข้อมูล - ยังคงเหมือนเดิม
+        // 5. อัปเดตฐานข้อมูล
         $booking->update([
-            'slip_image_path' => $path,
+            'slip_image_path' => 'public/' . $path,
             'payment_status'  => 'verifying',
         ]);
 
-        $this->pushMessageToGroup($request); // ส่งข้อความแจ้งเตือนผ่าน LINE Notify
+        // 6. เรียกใช้เมธอดใหม่เพื่อส่ง LINE Notify
+        $this->pushMessageToGroupFromBooking($booking);
 
-        // 6. ส่งกลับไปหน้า Dashboard พร้อมข้อความแจ้งเตือน - ยังคงเหมือนเดิม
+        // 7. ส่งกลับไปหน้า Dashboard
         return redirect()->route('user.dashboard')->with('success', 'อัปโหลดสลิปสำเร็จแล้ว รอการตรวจสอบจากเจ้าหน้าที่');
     }
 
+    public function show(Booking $booking)
+    {
+        // 1. ตรวจสอบสิทธิ์ (Authorization)
+        // ให้แน่ใจว่าผู้ใช้ที่ Login อยู่เป็นเจ้าของการจองนี้เท่านั้น
+        if ($booking->user_id !== Auth::id()) {
+            abort(403, 'ACCESS DENIED'); // ป้องกันไม่ให้ดูการจองของคนอื่น
+        }
+
+        // 2. โหลดข้อมูลที่เกี่ยวข้องเพิ่มเติม (ถ้าจำเป็น)
+        $booking->load('fieldType', 'user');
+
+        // 3. ส่งข้อมูลไปยัง View ใหม่
+        return view('user.booking.show', compact('booking'));
+    }
     public function createMembershipBooking()
     {
         // 1. ตรวจสอบหาบัตรสมาชิกที่ใช้งานได้ของผู้ใช้
@@ -435,38 +450,115 @@ class BookingController extends Controller
         return $days[$date->dayOfWeek];
     }
 
-    private function pushMessageToGroup(Request $request)
+    // private function pushMessageToGroup(Booking $booking)
+    // {
+
+    //     // ข้อมูลสำหรับการส่งข้อความไปยัง LINE Group
+
+    //     $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU='; // Channel Access Token
+    //     $groupId     = 'C8828a7ce6dd1f2f1d9ad3638489c6e9d';
+
+    //     $message =      "\n📸 มีการแจ้งชำระเงินใหม่!\n" .
+    //                     "--------------------\n" .
+    //                     "รหัสจอง: " . $booking->booking_code . "\n" .
+    //                     "ผู้จอง: " . $booking->user->name . "\n" .
+    //                     "ยอดเงิน: " . number_format($booking->total_price, 2) . " บาท\n" .
+    //                         "--------------------\n" .
+    //                     "กรุณาตรวจสอบสลิปในหน้า Admin Dashboard";
+    //     // เตรียม payload
+    //     $body = [
+    //         'to'       => $groupId,
+    //         'messages' => [
+    //             [
+    //                 'type' => 'text',
+    //                 'text' => $message,
+    //             ],
+    //             [
+    //                 'type' => 'image',
+    //                 'originalContentUrl' => url('storage/' . $booking->slip_image_path),
+    //                 'previewImageUrl'    => url('storage/' . $booking->slip_image_path),
+    //             ]
+    //         ],
+    //     ];
+
+    //     // เรียก API
+    //     $response = Http::withHeaders([
+    //         'Content-Type'  => 'application/json',
+    //         'Authorization' => 'Bearer ' . $accessToken,
+    //     ])->post('https://api.line.me/v2/bot/message/push', $body);
+
+    //     // ตรวจสอบผลลัพธ์
+    //     if ($response->successful()) {
+    //         return response()->json(['status' => 'success', 'message' => 'ส่งข้อความสำเร็จ']);
+    //     } else {
+    //         return response()->json([
+    //             'status'   => 'error',
+    //             'response' => $response->body(),
+    //         ], 500);
+    //     }
+    // }
+
+    private function pushMessageToGroupFromBooking(Booking $booking)
     {
-
-        $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU='; // Channel Access Token
+        $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU=';
         $groupId     = 'C8828a7ce6dd1f2f1d9ad3638489c6e9d';
-        $message     = $request->input('message', 'ทดสอบข้อความจาก Laravel');
 
-        // เตรียม payload
+        // 1. เตรียมข้อมูล "ประเภทการจอง"
+        $bookingTypeDescription = '';
+        switch ($booking->booking_type) {
+            case 'hourly':
+                $bookingTypeDescription = 'รายชั่วโมง';
+                break;
+            case 'daily_package':
+                $bookingTypeDescription = 'เหมาวัน';
+                break;
+            case 'membership':
+                $bookingTypeDescription = 'ใช้บัตรสมาชิก';
+                break;
+            default:
+                $bookingTypeDescription = 'ไม่ระบุ';
+                break;
+        }
+
+// 2. เตรียมข้อมูล "สนาม/แพ็กเกจ"
+        $itemDetails = '';
+        if ($booking->booking_type === 'daily_package') {
+            // ถ้าเป็นเหมาวัน ให้แสดงชื่อแพ็กเกจ
+            $itemDetails = $booking->price_calculation_details['package_name'] ?? 'เหมาวัน';
+        } else {
+            // ถ้าเป็นประเภทอื่น ให้แสดงชื่อสนาม
+            $itemDetails = optional($booking->fieldType)->name ?? 'ไม่ระบุ';
+        }
+
+// 3. สร้างข้อความสุดท้ายโดยใช้ตัวแปรที่เตรียมไว้
+        $textMessage = "📌 แจ้งเตือนการจองใหม่\n" .
+        "--------------------\n" .
+        "รหัสการจอง: {$booking->booking_code}\n" .
+        "ชื่อผู้จอง: {$booking->user->name}\n" .
+        "ประเภทการจอง: {$bookingTypeDescription}\n" .
+        "สนาม/แพ็กเกจ: {$itemDetails}\n" .
+        "วันที่: " . thaidate('j F Y', (string) $booking->booking_date) . "\n" .
+        "เวลา: " . Carbon::parse($booking->start_time)->format('H:i') . " - " . Carbon::parse($booking->end_time)->format('H:i') . " น.\n" .
+        "รวมเวลา: {$booking->duration_in_hours} ชั่วโมง\n" .
+        "ยอดชำระ: " . number_format($booking->total_price, 2) . " บาท";
+
         $body = [
             'to'       => $groupId,
             'messages' => [
                 [
                     'type' => 'text',
-                    'text' => $message,
+                    'text' => $textMessage,
                 ],
             ],
         ];
 
-        // เรียก API
         $response = Http::withHeaders([
             'Content-Type'  => 'application/json',
             'Authorization' => 'Bearer ' . $accessToken,
         ])->post('https://api.line.me/v2/bot/message/push', $body);
 
-        // ตรวจสอบผลลัพธ์
-        if ($response->successful()) {
-            return response()->json(['status' => 'success', 'message' => 'ส่งข้อความสำเร็จ']);
-        } else {
-            return response()->json([
-                'status'   => 'error',
-                'response' => $response->body(),
-            ], 500);
+        if (! $response->successful()) {
+            Log::error('LINE Push Failed', ['response' => $response->body()]);
         }
     }
 

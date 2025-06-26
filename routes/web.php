@@ -6,7 +6,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-use App\Services\LineNotifyService;
 
 Route::get('/', function () {
     return view('welcome');
@@ -49,7 +48,7 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::post('/booking/confirm', [BookingController::class, 'confirm'])->name('booking.confirm');
     Route::post('/booking/store', [BookingController::class, 'store'])->name('booking.store');
     Route::post('/bookings/{booking}/upload-slip', [BookingController::class, 'uploadSlip'])->name('booking.uploadSlip');
-
+    Route::get('/booking/{booking}', [BookingController::class, 'show'])->name('booking.show');
     Route::get('/membership/booking', [BookingController::class, 'createMembershipBooking'])->name('membership.booking.create');
 
     Route::get('/profile', [UserController::class, 'edit'])->name('profile.edit');
@@ -57,4 +56,3 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::put('/profile/password', [UserController::class, 'updatePassword'])->name('password.update');
 
 });
-

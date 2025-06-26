@@ -106,7 +106,7 @@
                                                         <i class="fas fa-upload me-1"></i> แจ้งชำระเงิน
                                                     </button>
                                                 @else
-                                                    <a href="#" class="btn btn-sm btn-outline-secondary disabled"
+                                                    <a href="{{ route('user.booking.show', $booking) }}" class="btn btn-sm btn-outline-secondary"
                                                         aria-disabled="true">รายละเอียด</a>
                                                 @endif
                                             </td>
