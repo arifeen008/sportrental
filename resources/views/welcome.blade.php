@@ -123,6 +123,72 @@
         </div>
     </div>
 
+    <div class="bg-light">
+        <div class="container py-5">
+            <h2 class="text-center section-title fw-bold">ข่าวสารและกิจกรรม</h2>
+            <div class="row g-4">
+
+                {{-- ตัวอย่างข่าวสาร/กิจกรรมที่ 1 --}}
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=2070"
+                            class="card-img-top" alt="กิจกรรม" style="height: 220px; object-fit: cover;">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">เปิดรับสมัคร! การแข่งขันฟุตซอล SKF CUP 2025</h5>
+                            <p class="card-text text-muted flex-grow-1">ชิงถ้วยรางวัลเกียรติยศพร้อมเงินรางวัลรวมกว่า 50,000
+                                บาท! เปิดรับสมัครแล้วตั้งแต่วันนี้ - 31 กรกฎาคม 2568</p>
+                            <div class="mt-auto">
+                                <a href="#" class="btn btn-primary">อ่านเพิ่มเติม</a>
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted small">
+                            เผยแพร่เมื่อ: {{ thaidate('j M Y', now()->subDays(1)) }}
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ตัวอย่างข่าวสาร/กิจกรรมที่ 2 --}}
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=2070"
+                            class="card-img-top" alt="โปรโมชัน" style="height: 220px; object-fit: cover;">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">โปรโมชันพิเศษ! มา 5 จ่าย 4 ตลอดเดือนกรกฎาคม</h5>
+                            <p class="card-text text-muted flex-grow-1">เอาใจสายทีมเวิร์ค! ชวนเพื่อนมาเล่นให้ครบแก๊ง
+                                จองสนามรายชั่วโมงช่วงเวลากลางวัน (09:00-18:00) รับส่วนลดทันที</p>
+                            <div class="mt-auto">
+                                <a href="#" class="btn btn-primary">อ่านเพิ่มเติม</a>
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted small">
+                            เผยแพร่เมื่อ: {{ thaidate('j M Y', now()->subDays(5)) }}
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ตัวอย่างข่าวสาร/กิจกรรมที่ 3 --}}
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow-sm h-100">
+                        <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=2070"
+                            class="card-img-top" alt="ปรับปรุงสนาม" style="height: 220px; object-fit: cover;">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">ปรับปรุงไฟส่องสว่างสนาม A พร้อมให้บริการเต็มรูปแบบ</h5>
+                            <p class="card-text text-muted flex-grow-1">สนาม A
+                                ของเราได้ทำการติดตั้งระบบไฟส่องสว่างใหม่ทั้งหมด ให้ความสว่างที่มากกว่าและสบายตา
+                                พร้อมให้บริการแล้ววันนี้!</p>
+                            <div class="mt-auto">
+                                <a href="#" class="btn btn-primary">อ่านเพิ่มเติม</a>
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted small">
+                            เผยแพร่เมื่อ: {{ thaidate('j M Y', now()->subDays(10)) }}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
     <div class="container-fluid g-0">
         <div class="row g-0">
@@ -130,7 +196,8 @@
                 <h3>ติดต่อและเดินทาง</h3>
                 <p>SKF STADIUM ตั้งอยู่ในทำเลที่เดินทางสะดวก พร้อมให้บริการทุกวัน</p>
                 <ul class="list-unstyled">
-                    <li class="mb-2"><i class="fas fa-map-marker-alt fa-fw me-2"></i>47 หมู่ 7 ตำบลคลองยาง อำเภอเกาะลันตา
+                    <li class="mb-2"><i class="fas fa-map-marker-alt fa-fw me-2"></i>47 หมู่ 7 ตำบลคลองยาง
+                        อำเภอเกาะลันตา
                         จังหวัดกระบี่ 81120 </li>
                     <li class="mb-2"><i class="fas fa-phone fa-fw me-2"></i> 0864706113</li>
                     <li class="mb-2"><i class="fab fa-line fa-fw me-2"></i> @skfstadium</li>
