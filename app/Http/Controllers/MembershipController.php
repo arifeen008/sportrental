@@ -6,6 +6,8 @@ use App\Models\MembershipTier;
 use App\Models\UserMembership;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class MembershipController extends Controller
 {
@@ -45,7 +47,8 @@ class MembershipController extends Controller
         ]);
 
         // ส่งผู้ใช้ไปที่หน้ารายละเอียดการสั่งซื้อเพื่อชำระเงิน
-        return redirect()->route('user.membership.purchase.show', $purchase);
+        // ส่งผู้ใช้ไปที่หน้ารายละเอียดการสั่งซื้อเพื่อชำระเงิน
+        return redirect()->route('user.purchase.show', $purchase);
     }
 
     /**
@@ -57,27 +60,85 @@ class MembershipController extends Controller
         if ($purchase->user_id !== Auth::id()) {
             abort(403);
         }
-        return view('membership.show_purchase', compact('purchase'));
+
+        $purchase->load(['user', 'membershipTier']);
+        return view('user.membership.show_purchase', compact('purchase'));
     }
 
     /**
-     * รับไฟล์สลิปสำหรับการซื้อบัตร
+     * รับไฟล์สลิปสำหรับการซื้อบัตร, เปลี่ยนชื่อ, จัดเก็บ, และอัปเดตสถานะ
      */
     public function uploadSlip(Request $request, MembershipPurchase $purchase)
     {
-        if ($purchase->user_id !== Auth::id()) {abort(403);}
+        // 1. ตรวจสอบสิทธิ์ (เหมือนเดิม)
+        if ($purchase->user_id !== Auth::id()) {
+            abort(403);
+        }
 
-        $request->validate(['slip_image' => 'required|image|max:2048']);
+        // 2. ตรวจสอบข้อมูล (เหมือนเดิม)
+        $request->validate([
+            'slip_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
 
-        $path = $request->file('slip_image')->store('membership_slips', 'public');
+        // ================== START: ส่วนที่แก้ไขใหม่ ==================
 
+        // 3. สร้างชื่อไฟล์ใหม่ตามที่คุณต้องการ
+        $file      = $request->file('slip_image');
+        $extension = $file->getClientOriginalExtension(); // ดึงนามสกุลไฟล์เดิม (เช่น .jpg, .png)
+
+        // สร้างชื่อไฟล์จาก ปีเดือนวัน_รหัสการซื้อ.นามสกุล
+        $newFilename = now()->format('YmdHi') . '_purchase_' . $purchase->purchase_code . '.' . $extension;
+
+        // 4. บันทึกไฟล์ด้วยชื่อใหม่ (ใช้ storeAs)
+        // เก็บไฟล์ในโฟลเดอร์ 'membership_slips' บน disk ที่ชื่อว่า 'public'
+        $path = $file->storeAs('membership_slips', $newFilename, 'public');
+
+        // =================== END: ส่วนที่แก้ไขใหม่ ===================
+
+        // 5. อัปเดตฐานข้อมูล (ตอนนี้จะเก็บ path ที่มีชื่อไฟล์ใหม่ของเรา)
         $purchase->update([
             'slip_image_path' => $path,
             'status'          => 'verifying',
         ]);
 
-        // อาจจะเพิ่มการแจ้งเตือน LINE ไปหา Admin ที่นี่
+        // 6. (ถ้ามี) แจ้งเตือน LINE ไปหา Admin
+        $this->sendPurchaseNotification($purchase);
 
-        return redirect()->route('dashboard')->with('success', 'แจ้งชำระเงินสำเร็จแล้ว รอการตรวจสอบและเปิดใช้งานบัตร');
+        // 7. ส่งกลับไปหน้า Dashboard (เหมือนเดิม)
+        return redirect()->route('user.dashboard')->with('success', 'แจ้งชำระเงินสำเร็จแล้ว รอการตรวจสอบและเปิดใช้งานบัตร');
+    }
+
+    private function sendPurchaseNotification($purchase)
+    {
+        $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU=';
+        $groupId     = 'C8828a7ce6dd1f2f1d9ad3638489c6e9d';
+        $purchase->load(['user', 'membershipTier']);
+
+        $textMessage = "\n💳 มีการแจ้งชำระเงินค่าบัตรสมาชิก!\n" .
+        "--------------------\n" .
+        "รหัสสั่งซื้อ: {$purchase->purchase_code}\n" .
+        "ชื่อผู้ซื้อ: {$purchase->user->name}\n" .
+        "ประเภทบัตร: {$purchase->membershipTier->tier_name}\n" .
+        "ราคา: " . number_format($purchase->price, 2) . " บาท\n" .
+            "--------------------\n" .
+            "กรุณาตรวจสอบสลิปและอนุมัติในหน้า Admin";
+        $body = [
+            'to'       => $groupId,
+            'messages' => [['type' => 'text', 'text' => $textMessage]],
+        ];
+        // เรียก API
+        try {
+            $response = Http::withHeaders([
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Bearer ' . $accessToken,
+            ])->post('https://api.line.me/v2/bot/message/push', $body);
+
+            if (! $response->successful()) {
+                Log::error('LINE Push Failed', ['response' => $response->body()]);
+            }
+        } catch (\Exception $e) {
+            Log::error('LINE Push Exception', ['error' => $e->getMessage()]);
+        }
+
     }
 }

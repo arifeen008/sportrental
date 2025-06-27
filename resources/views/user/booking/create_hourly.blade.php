@@ -13,9 +13,6 @@
                         <h4 class="mb-0"><i class="fas fa-clock me-2"></i>จองสนามรายชั่วโมง</h4>
                     </div>
                     <div class="card-body p-4">
-                        @if (session('error'))
-                            <div class="alert alert-danger">{{ session('error') }}</div>
-                        @endif
                         <form action="{{ route('user.booking.confirm') }}" method="POST">
                             @csrf
                             <input type="hidden" name="booking_type" value="hourly">
@@ -118,4 +115,36 @@
 
         </div>
     </div>
+@endsection
+@section('scripts')
+    <script>
+        // ตรวจสอบว่ามี session 'success' หรือไม่
+        @if (session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: '{{ session('success') }}',
+                timer: 3000, // แสดงผล 3 วินาทีแล้วหายไป
+                showConfirmButton: false
+            });
+        @endif
+
+        // ตรวจสอบว่ามี session 'error' หรือไม่
+        @if (session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด!',
+                text: '{{ session('error') }}'
+            });
+        @endif
+
+        // ตรวจสอบว่ามี session 'warning' หรือไม่
+        @if (session('warning'))
+            Swal.fire({
+                icon: 'warning',
+                title: 'คำเตือน',
+                text: '{{ session('warning') }}'
+            });
+        @endif
+    </script>
 @endsection

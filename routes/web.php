@@ -1,13 +1,14 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\MembershipPurchaseController;
 use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\UserMembershipController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\Admin\MembershipPurchaseController;
 use App\Models\Post;
 use Illuminate\Support\Facades\Route;
 
@@ -47,11 +48,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/bookings/{booking}', [AdminController::class, 'show'])->name('booking.show');
     Route::resource('posts', PostController::class);
 
-     Route::prefix('purchases')->name('purchases.')->group(function() {
+    Route::prefix('purchases')->name('purchases.')->group(function () {
         Route::get('/', [MembershipPurchaseController::class, 'index'])->name('index');
         Route::post('/{purchase}/approve', [MembershipPurchaseController::class, 'approve'])->name('approve');
         Route::post('/{purchase}/reject', [MembershipPurchaseController::class, 'reject'])->name('reject');
     });
+
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('users.show');
 });
 
 // user routes

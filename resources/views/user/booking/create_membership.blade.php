@@ -34,9 +34,7 @@
                         <h5 class="mb-0">กรอกข้อมูลเพื่อจองสนามโดยใช้สิทธิ์</h5>
                     </div>
                     <div class="card-body">
-                        @if (session('error'))
-                            <div class="alert alert-danger">{{ session('error') }}</div>
-                        @endif
+                      
                         <form action="{{ route('user.booking.confirm') }}" method="POST">
                             @csrf
                             <input type="hidden" name="booking_type" value="membership">
@@ -52,7 +50,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="booking_date" class="form-label">ในวันที่</label>
-                                    <input type="date" class="form-control" name="booking_date" min="{{ date('Y-m-d') }}"
+                                    <input type="date" class="form-control" name="booking_date" min="{{ now()->addDays(3)->format('Y-m-d') }}"
                                         required>
                                 </div>
                                 <div class="col-md-6">
@@ -139,4 +137,36 @@
             </div>
         </div>
     </div>
+@endsection
+@section('scripts')
+    <script>
+        // ตรวจสอบว่ามี session 'success' หรือไม่
+        @if (session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: '{{ session('success') }}',
+                timer: 3000, // แสดงผล 3 วินาทีแล้วหายไป
+                showConfirmButton: false
+            });
+        @endif
+
+        // ตรวจสอบว่ามี session 'error' หรือไม่
+        @if (session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด!',
+                text: '{{ session('error') }}'
+            });
+        @endif
+
+        // ตรวจสอบว่ามี session 'warning' หรือไม่
+        @if (session('warning'))
+            Swal.fire({
+                icon: 'warning',
+                title: 'คำเตือน',
+                text: '{{ session('warning') }}'
+            });
+        @endif
+    </script>
 @endsection

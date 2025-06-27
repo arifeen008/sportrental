@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('styles')
+@push('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <style>
         .tier-card {
@@ -12,7 +12,7 @@
             box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
         }
     </style>
-@endsection
+@endpush
 
 @section('content')
     <div class="container py-5">

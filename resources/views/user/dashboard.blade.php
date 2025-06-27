@@ -31,32 +31,65 @@
 
         <div class="row g-4">
             <div class="col-lg-8">
+                {{-- ในไฟล์ dashboard.blade.php --}}
+
                 @if ($activeMembership)
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="far fa-id-card me-2"></i> บัตรสมาชิกของคุณ</h5>
+                    {{-- ================= ดีไซน์ใหม่สำหรับผู้ใช้ที่มีบัตร ================= --}}
+                    <div class="card shadow-sm mb-4 text-white"
+                        style="background: linear-gradient(45deg, #2a2a2a, #4a4a4a);">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">{{ $activeMembership->membershipTier->tier_name }}</h5>
+                                    <p class="card-text small text-white-50">{{ $activeMembership->card_number }}</p>
+                                </div>
+                                <span class="badge bg-light text-dark">Active</span>
+                            </div>
+
+                            <div class="my-4">
+                                <label for="remaining-hours" class="form-label">ชั่วโมงคงเหลือ</label>
+                                <div class="progress" style="height: 20px;">
+                                    @php
+                                        $percentage =
+                                            ($activeMembership->remaining_hours / $activeMembership->initial_hours) *
+                                            100;
+                                    @endphp
+                                    <div class="progress-bar" role="progressbar" style="width: {{ $percentage }}%;"
+                                        aria-valuenow="{{ $activeMembership->remaining_hours }}" aria-valuemin="0"
+                                        aria-valuemax="{{ $activeMembership->initial_hours }}">
+                                        {{ number_format($activeMembership->remaining_hours) }} ชม.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-end">
+                                <div>
+                                    <p class="mb-0 small">เจ้าของบัตร</p>
+                                    <h6 class="mb-0">{{ Auth::user()->name }}</h6>
+                                </div>
+                                <div>
+                                    <p class="mb-0 small text-end">หมดอายุ</p>
+                                    <h6 class="mb-0">{{ thaidate('j M Y', $activeMembership->expires_at) }}</h6>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <dl class="row mb-2">
-                                <dt class="col-sm-4">ประเภทบัตร:</dt>
-                                <dd class="col-sm-8">{{ $activeMembership->membershipTier->tier_name }}</dd>
-                                <dt class="col-sm-4">ชั่วโมงคงเหลือ:</dt>
-                                <dd class="col-sm-8 fw-bold fs-5 text-primary">
-                                    {{ number_format($activeMembership->remaining_hours, 2) }} ชม.</dd>
-                                <dt class="col-sm-4">วันหมดอายุ:</dt>
-                                <dd class="col-sm-8">{{ thaidate('j F Y', $activeMembership->expires_at) }}</dd>
-                            </dl>
+                        <div class="card-footer bg-dark">
                             <a href="{{ route('user.create.membership') }}" class="btn btn-success w-100">
                                 <i class="fas fa-calendar-plus me-2"></i> จองสนามด้วยบัตรนี้
                             </a>
                         </div>
                     </div>
                 @else
-                    <p class="text-muted text-center">คุณยังไม่มีบัตรสมาชิกที่ใช้งานได้</p>
-                    <div class="text-center">
-                        <a href="{{ route('user.purchase.index') }}" class="btn btn-success">
-                            <i class="fas fa-credit-card me-2"></i> ดูและซื้อบัตรสมาชิก
-                        </a>
+                    {{-- ================= ดีไซน์ใหม่สำหรับผู้ใช้ที่ยังไม่มีบัตร ================= --}}
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body text-center p-5">
+                            <i class="fas fa-id-card fa-3x text-muted mb-3"></i>
+                            <h5 class="card-title">คุณยังไม่มีบัตรสมาชิก</h5>
+                            <p class="text-muted">สมัครสมาชิกเพื่อรับสิทธิพิเศษและส่วนลดมากมาย!</p>
+                            <a href="{{ route('user.purchase.index') }}" class="btn btn-primary">
+                                <i class="fas fa-credit-card me-2"></i> ดูและซื้อบัตรสมาชิก
+                            </a>
+                        </div>
                     </div>
                 @endif
 
@@ -211,7 +244,7 @@
                             <div class="alert alert-info">
                                 <p class="mb-1">ยอดที่ต้องชำระ: <strong
                                         class="fs-5">{{ number_format($booking->total_price, 2) }} บาท</strong></p>
-                                <p class="small mb-0">โอนเงินมาที่: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามปะกาสัย)</p>
+                                <p class="small mb-0">โอนเงินมาที่: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามษะกอฟะฮ จำกัด)</p>
                             </div>
                             <div class="text-center mb-3">
                                 <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป"

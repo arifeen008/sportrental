@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MembershipPurchase;
 use App\Models\UserMembership;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
 use Illuminate\Support\Str;
 
 class MembershipPurchaseController extends Controller
@@ -70,4 +69,7 @@ class MembershipPurchaseController extends Controller
 
         return redirect()->route('admin.purchases.index')->with('success', 'ปฏิเสธรายการสั่งซื้อเรียบร้อยแล้ว');
     }
+
+
 }
+

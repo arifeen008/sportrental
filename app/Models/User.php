@@ -72,4 +72,9 @@ class User extends Authenticatable
         return $this->hasMany(UserMembership::class);
     }
 
+    public function bookings()
+    {
+        // User 1 คน มีได้หลาย Bookings (hasMany)
+        return $this->hasMany(Booking::class);
+    }
 }

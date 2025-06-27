@@ -73,8 +73,8 @@
                 </a>
             </li>
             <li class="nav-item mb-1">
-                <a href="{{ route('admin.memberships.index') }}"
-                    class="nav-link text-white {{ request()->routeIs('admin.memberships.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.users.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                     <i class="fas fa-users fa-fw me-2"></i> ข้อมูลสมาชิก
                 </a>
             </li>

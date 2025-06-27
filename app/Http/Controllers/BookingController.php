@@ -58,9 +58,7 @@ class BookingController extends Controller
 
         $bookingDate = Carbon::parse($request->input('booking_date'));
         if ($bookingDate->isMonday()) {
-            return redirect()->back()
-                ->with('error', 'ขออภัย สนามปิดให้บริการทุกวันจันทร์')
-                ->withInput();
+            return redirect()->back()->with('error', 'ขออภัย สนามปิดให้บริการทุกวันจันทร์')->withInput();
         }
 
         $bookingType = $request->input('booking_type');
@@ -71,9 +69,7 @@ class BookingController extends Controller
 
             // เช็คว่าเวลาเริ่มต้นอยู่ก่อน 18:00 และเวลาสิ้นสุดอยู่หลัง 18:00 หรือไม่
             if ($startTime < $boundaryTime && $endTime > $boundaryTime) {
-                return redirect()->back()
-                    ->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้ กรุณาแยกทำ 2 รายการจอง')
-                    ->withInput();
+                return redirect()->back()->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้ กรุณาแยกทำ 2 รายการจอง')->withInput();
             }
         }
 
@@ -123,10 +119,12 @@ class BookingController extends Controller
         try {
             // ใช้ Transaction เพื่อให้แน่ใจว่าถ้ามีขั้นตอนไหนพลาด จะยกเลิกทั้งหมด
             $booking = DB::transaction(function () use ($request) {
-                // 1. เตรียมข้อมูลที่จะบันทึก
+                // 1. เตรียมข้อมูลพื้นฐาน
+                $bookingType = $request->input('booking_type');
+
                 $dataToSave = [
                     'user_id'            => Auth::id(),
-                    'booking_type'       => $request->input('booking_type'),
+                    'booking_type'       => $bookingType,
                     'booking_date'       => $request->input('booking_date'),
                     'notes'              => $request->input('notes'),
                     'base_price'         => $request->input('base_price', 0),
@@ -136,9 +134,16 @@ class BookingController extends Controller
                     'duration_in_hours'  => $request->input('duration_in_hours', 0),
                     'hours_deducted'     => $request->input('hours_deducted'),
                     'user_membership_id' => $request->input('user_membership_id'),
-                    'status'             => 'confirmed',
-                    'payment_status'     => 'unpaid',
+                    'status'             => 'confirmed', // ทุกการจองถือว่า confirmed ในเบื้องต้น
                 ];
+
+                if ($bookingType === 'membership') {
+                    // ถ้าเป็นการใช้บัตรสมาชิก ให้ถือว่า "จ่ายแล้ว" ทันที
+                    $dataToSave['payment_status'] = 'paid';
+                } else {
+                    // ถ้าเป็นประเภทอื่น ให้ตั้งเป็น "รอชำระเงิน" ตามปกติ
+                    $dataToSave['payment_status'] = 'unpaid';
+                }
 
                 if ($request->input('booking_type') === 'hourly' || $request->input('booking_type') === 'membership') {
                     $dataToSave['field_type_id'] = $request->input('field_type_id');
@@ -332,6 +337,7 @@ class BookingController extends Controller
             'total_price'             => $finalPrice,     // <-- อัปเดต: เป็นราคาสุทธิหลังลด
             'special_perks'           => null,
             'price_breakdown_details' => $priceBreakdown,
+            'hours_to_deduct'         => null,
         ];
 
     }
@@ -392,10 +398,11 @@ class BookingController extends Controller
             'overtime_cost'     => $overtimeCost,
             'overtime_details'  => $overtimeDetails,
             'total_price'       => $totalPrice,
-            'duration_in_hours' => $durationInHours, // <-- เพิ่ม Key นี้เข้ามาใน return array
+            'duration_in_hours' => $durationInHours,
             'deposit_amount'    => $depositAmount,
             'security_deposit'  => $securityDeposit,
             'special_perks'     => null,
+            'hours_to_deduct'   => null,
         ];
     }
     private function calculateMembershipUsage(Request $request)
@@ -437,10 +444,12 @@ class BookingController extends Controller
             'booking_date'       => $bookingDate,
             'time_range'         => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
             'duration_in_hours'  => $durationInHours,
-            'hours_to_deduTct'   => $hoursToDeduct,
+            'hours_to_deduct'    => $hoursToDeduct,
             'user_membership_id' => $membership->id,
             'total_price'        => 0,
             'special_perks'      => $tier->special_perks,
+            'discount_amount'    => 0,
+            'discount_reason'    => null,
         ];
     }
 
