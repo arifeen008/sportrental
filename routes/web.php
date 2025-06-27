@@ -56,6 +56,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('users.show');
+
+    Route::patch('/booking/{booking}/reschedule', [AdminController::class, 'rescheduleBooking'])->name('booking.reschedule');
 });
 
 // user routes
@@ -84,5 +86,7 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::post('/purchase', [MembershipController::class, 'store'])->name('purchase.store');
     Route::get('/purchase/{purchase}', [MembershipController::class, 'show'])->name('purchase.show');
     Route::post('/purchase/{purchase}/upload-slip', [MembershipController::class, 'uploadSlip'])->name('purchase.uploadSlip');
+
+
 
 });

@@ -146,9 +146,11 @@
                                                         <i class="fas fa-upload me-1"></i> แจ้งชำระเงิน
                                                     </button>
                                                 @else
+                                                    {{-- แก้ไขชื่อ Route และลบ aria-disabled ออก --}}
                                                     <a href="{{ route('user.booking.show', $booking) }}"
-                                                        class="btn btn-sm btn-outline-secondary"
-                                                        aria-disabled="true">รายละเอียด</a>
+                                                        class="btn btn-sm btn-outline-secondary">
+                                                        <i class="fas fa-eye me-1"></i> รายละเอียด
+                                                    </a>
                                                 @endif
                                             </td>
                                         </tr>
@@ -244,7 +246,8 @@
                             <div class="alert alert-info">
                                 <p class="mb-1">ยอดที่ต้องชำระ: <strong
                                         class="fs-5">{{ number_format($booking->total_price, 2) }} บาท</strong></p>
-                                <p class="small mb-0">โอนเงินมาที่: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามษะกอฟะฮ จำกัด)</p>
+                                <p class="small mb-0">โอนเงินมาที่: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามษะกอฟะฮ จำกัด)
+                                </p>
                             </div>
                             <div class="text-center mb-3">
                                 <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป"

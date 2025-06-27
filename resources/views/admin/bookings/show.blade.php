@@ -129,7 +129,17 @@
                     @endif
                 </div>
             </div>
-
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">แก้ไขวัน/เวลาจอง</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted small">ใช้ฟังก์ชันนี้ในกรณีที่ลูกค้าติดต่อขอเลื่อนวันหรือเวลา</p>
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                        <i class="fas fa-edit me-2"></i>แก้ไขการจอง
+                    </button>
+                </div>
+            </div>
             @if ($booking->payment_status === 'rejected' && $booking->rejection_reason)
                 <div class="alert alert-danger mt-4">
                     <strong>เหตุผลที่ถูกปฏิเสธ:</strong><br>
@@ -151,4 +161,57 @@
             </div>
         </div>
     @endif
+
+    <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form action="{{ route('admin.booking.reschedule', $booking) }}" method="POST">
+                    @csrf
+                    @method('PATCH') {{-- ใช้ PATCH สำหรับการอัปเดต --}}
+                    <div class="modal-header">
+                        <h5 class="modal-title">แก้ไขการจอง: {{ $booking->booking_code }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">การจองเดิม: {{ thaidate('j M Y', $booking->booking_date) }} เวลา
+                            {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }}</p>
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>วันที่ใหม่</strong></label>
+                            <input type="date" name="new_booking_date" class="form-control"
+                                value="{{ $booking->booking_date->format('Y-m-d') }}" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="form-label"><strong>เวลาเริ่มใหม่</strong></label>
+                                <select class="form-select" name="new_start_time" required>
+                                    @for ($i = 9; $i <= 21; $i++)
+                                        @php $time = sprintf('%02d', $i) . ':00'; @endphp
+                                        <option value="{{ $time }}"
+                                            {{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') == $time ? 'selected' : '' }}>
+                                            {{ $time }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label"><strong>เวลาสิ้นสุดใหม่</strong></label>
+                                <select class="form-select" name="new_end_time" required>
+                                    @for ($i = 10; $i <= 22; $i++)
+                                        @php $time = sprintf('%02d', $i) . ':00'; @endphp
+                                        <option value="{{ $time }}"
+                                            {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') == $time ? 'selected' : '' }}>
+                                            {{ $time }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection

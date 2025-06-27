@@ -54,7 +54,7 @@
                                 <p class="mb-1">กรุณาชำระเงินจำนวน <strong class="fs-4 text-danger">{{ number_format($purchase->price, 2) }}</strong> บาท</p>
                                 <p class="small mb-0">มาที่บัญชี: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามปะกาสัย)</p>
                             </div>
-                            <form action="{{ route('membership.purchase.uploadSlip', $purchase) }}" method="POST" enctype="multipart/form-data">
+                            <form action="{{ route('user.purchase.uploadSlip', $purchase) }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="slip_image" class="form-label">อัปโหลดสลิปการโอนเงินที่นี่</label>
@@ -85,7 +85,7 @@
                         @endif
                     </div>
                      <div class="mt-4 text-center">
-                        <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary">&laquo; กลับสู่แดชบอร์ด</a>
+                        <a href="{{ route('user.dashboard') }}" class="btn btn-outline-secondary">&laquo; กลับสู่แดชบอร์ด</a>
                     </div>
                 </div>
             </div>

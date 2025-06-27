@@ -74,7 +74,7 @@ class AdminController extends Controller
      */
     public function listAllBookings()
     {
-        $bookings = Booking::with(['user', 'fieldType'])->latest()->paginate(20); 
+        $bookings = Booking::with(['user', 'fieldType'])->latest()->paginate(20);
         return view('admin.bookings.index', compact('bookings'));
     }
 
@@ -85,6 +85,47 @@ class AdminController extends Controller
     {
         $booking->load(['user', 'fieldType']);
         return view('admin.bookings.show', compact('booking'));
+    }
+
+    // ใน AdminBookingController.php
+
+/**
+ * อัปเดตวันและเวลาของการจองโดย Admin
+ */
+    public function rescheduleBooking(Request $request, Booking $booking)
+    {
+        // 1. ตรวจสอบข้อมูลที่ส่งมาจากฟอร์ม
+        $validated = $request->validate([
+            'new_booking_date' => 'required|date',
+            'new_start_time'   => 'required|date_format:H:i',
+            'new_end_time'     => 'required|date_format:H:i|after:new_start_time',
+        ]);
+
+                                                             // 2. ตรวจสอบว่าเวลาใหม่ว่างหรือไม่ (ป้องกัน Admin จองซ้อนเอง)
+        $isBooked = Booking::where('id', '!=', $booking->id) // ไม่ต้องเช็คกับตัวเอง
+            ->where('field_type_id', $booking->field_type_id)
+            ->where('booking_date', $validated['new_booking_date'])
+            ->where('payment_status', 'paid')
+            ->where('start_time', '<', $validated['new_end_time'])
+            ->where('end_time', '>', $validated['new_start_time'])
+            ->exists();
+
+        if ($isBooked) {
+            // ถ้าเวลาใหม่ไม่ว่าง ให้ส่ง Error กลับไป
+            return redirect()->back()->with('error', 'ไม่สามารถเลื่อนได้: ช่วงเวลาใหม่ที่เลือกมีผู้จองแล้ว');
+        }
+
+        // 3. อัปเดตข้อมูลการจอง
+        $booking->update([
+            'booking_date'      => $validated['new_booking_date'],
+            'start_time'        => $validated['new_start_time'],
+            'end_time'          => $validated['new_end_time'],
+            'reschedule_status' => 'rescheduled_by_admin', // บันทึกสถานะว่าถูกเลื่อนโดยแอดมิน
+        ]);
+
+        // อาจจะเพิ่มการแจ้งเตือนกลับไปหาลูกค้าทาง Email/LINE
+
+        return redirect()->route('admin.bookings.show', $booking)->with('success', 'แก้ไขวัน/เวลาการจองเรียบร้อยแล้ว');
     }
 
 }
