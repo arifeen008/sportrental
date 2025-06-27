@@ -124,53 +124,47 @@
 
     <div class="bg-light">
         <div class="container py-5">
-            <h2 class="text-center section-title fw-bold">ข่าวสารและกิจกรรม</h2>
+            <h2 class="text-center section-title fw-bold">ข่าวสารและกิจกรรมล่าสุด</h2>
 
-            @if ($latestPosts->isNotEmpty())
-                @php $coverPost = $latestPosts->first(); @endphp
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card bg-dark text-white shadow-lg">
-                            <img src="{{ $coverPost->cover_image_path ? Storage::url($coverPost->cover_image_path) : 'https://via.placeholder.com/1200x350.png?text=SKF+Stadium' }}"
-                                class="card-img" alt="{{ $coverPost->title }}"
-                                style="height: 350px; object-fit: cover; opacity: 0.5;">
-                            <div
-                                class="card-img-overlay d-flex flex-column justify-content-center align-items-center text-center p-3">
-                                <h3 class="card-title display-5 fw-bold">{{ $coverPost->title }}</h3>
-                                <p class="card-text lead d-none d-md-block">{{ Str::limit($coverPost->content, 150) }}</p>
-                                <a href="{{ route('posts.show', $coverPost) }}"
-                                    class="btn btn-primary btn-lg mt-3">อ่านรายละเอียด</a>
+            <div class="row g-4">
+                @forelse($latestPosts as $post)
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card shadow-sm h-100">
+                            {{-- แสดงรูปหน้าปกของแต่ละข่าว --}}
+                            @if ($post->cover_image_path)
+                                <img src="{{ Storage::url($post->cover_image_path) }}" class="card-img-top"
+                                    alt="{{ $post->title }}" style="height: 220px; object-fit: cover;">
+                            @else
+                                {{-- รูปภาพสำรองกรณีไม่มีรูป --}}
+                                <img src="https://via.placeholder.com/400x220.png?text=SKF+Stadium" class="card-img-top"
+                                    alt="Placeholder Image">
+                            @endif
+
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ $post->title }}</h5>
+                                <p class="card-text text-muted flex-grow-1">{{ Str::limit($post->content, 120) }}</p>
+                                <div class="mt-auto">
+                                    {{-- ลิงก์ไปยังหน้ารายละเอียดของข่าวสารนั้นๆ --}}
+                                    <a href="{{ route('posts.show', $post) }}" class="btn btn-primary">อ่านเพิ่มเติม</a>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted small">
+                                เผยแพร่เมื่อ: {{ thaidate('j M Y', $post->published_at) }}
                             </div>
                         </div>
                     </div>
-                </div>
+                @empty
+                    <div class="col-12">
+                        <p class="text-center text-muted">ยังไม่มีข่าวสารและกิจกรรมในขณะนี้</p>
+                    </div>
+                @endforelse
+            </div>
 
-                <div class="row g-4">
-                    @foreach ($latestPosts->skip(1) as $post)
-                        <div class="col-lg-6 col-md-6"> {{-- เปลี่ยนเป็น col-lg-6 เพื่อให้แสดง 2 เรื่อง --}}
-                            <div class="card shadow-sm h-100">
-                                @if ($post->cover_image_path)
-                                    <img src="{{ Storage::url($post->cover_image_path) }}" class="card-img-top"
-                                        alt="{{ $post->title }}" style="height: 220px; object-fit: cover;">
-                                @endif
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title">{{ $post->title }}</h5>
-                                    <p class="card-text text-muted flex-grow-1">{{ Str::limit($post->content, 100) }}</p>
-                                    <div class="mt-auto">
-                                        <a href="{{ route('posts.show', $post) }}"
-                                            class="btn btn-outline-primary">อ่านเพิ่มเติม</a>
-                                    </div>
-                                </div>
-                                <div class="card-footer text-muted small">
-                                    เผยแพร่เมื่อ: {{ thaidate('j M Y', $post->published_at) }}
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @else
-                <p class="text-center text-muted">ยังไม่มีข่าวสารและกิจกรรมในขณะนี้</p>
-            @endif
+            {{-- อาจจะเพิ่มปุ่มเพื่อไปดูข่าวทั้งหมดในอนาคต --}}
+            <div class="text-center mt-5">
+                <a href="#" class="btn btn-outline-primary">ดูข่าวสารทั้งหมด</a>
+            </div>
+
         </div>
     </div>
 

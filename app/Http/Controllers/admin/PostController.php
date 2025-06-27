@@ -118,7 +118,14 @@ class PostController extends Controller
         // โหลดรูปภาพประกอบทั้งหมดมาด้วย (Eager Loading)
         $post->load('images');
 
+        // 2. ดึงข่าวสารอื่นๆ (ไม่รวมโพสต์ปัจจุบัน) มา 5 เรื่องล่าสุดเพื่อแสดงใน Sidebar
+        $otherPosts = Post::where('status', 'published')
+            ->where('id', '!=', $post->id) // ไม่เอาโพสต์ที่กำลังดูอยู่
+            ->latest('published_at')
+            ->take(5)
+            ->get();
+
         // ส่งข้อมูลไปยัง View
-        return view('posts.show', compact('post'));
+        return view('posts.show', compact('post', 'otherPosts'));
     }
 }

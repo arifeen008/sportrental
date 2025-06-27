@@ -1,15 +1,13 @@
 @extends('layouts.app')
 
-@section('styles')
-    {{-- เพิ่ม Font Awesome CDN สำหรับไอคอนสวยๆ --}}
+@push('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <style>
-        /* ซ่อน wrapper ของ overtime ไว้ก่อนเป็นค่าเริ่มต้น */
         .overtime-wrapper {
             display: none;
         }
     </style>
-@endsection
+@endpush
 
 @section('content')
     <div class="container py-5">
@@ -57,13 +55,12 @@
 
                                 <div class="col-12">
                                     <label for="booking_date" class="form-label">ในวันที่</label>
-                                    <input type="date" class="form-control" name="booking_date" min="{{ date('Y-m-d') }}"
-                                        required>
+                                    <input type="date" class="form-control" name="booking_date"
+                                        min="{{ now()->addDays(5)->format('Y-m-d') }}" required>
                                 </div>
 
                                 <div class="col-12">
                                     <div class="form-check">
-                                        {{-- Checkbox ที่ใช้ควบคุม มี id="wants_overtime" --}}
                                         <input class="form-check-input" type="checkbox" id="wants_overtime"
                                             name="wants_overtime" value="1">
                                         <label class="form-check-label" for="wants_overtime">ต้องการช่วงเวลาเพิ่มเติม
@@ -71,7 +68,6 @@
                                     </div>
                                 </div>
 
-                                {{-- Div ที่จะถูกซ่อน/แสดง มี id="overtime_end_time_wrapper" --}}
                                 <div id="overtime_end_time_wrapper" class="col-md-6 overtime-wrapper">
                                     <label for="overtime_end_time" class="form-label">ใช้บริการถึงเวลา</label>
                                     <select class="form-select" name="overtime_end_time">
@@ -84,7 +80,7 @@
 
                                 <div class="col-12">
                                     <label for="notes" class="form-label">หมายเหตุ (ถ้ามี)</label>
-                                    <textarea class="form-control" name="notes" rows="3"></textarea>
+                                    <textarea class="form-control" name="notes" rows="3" placeholder="เช่น ขออุปกรณ์เพิ่มเติม, คำขอพิเศษอื่นๆ"></textarea>
                                 </div>
                             </div>
 
@@ -150,7 +146,7 @@
     </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const overtimeCheckbox = document.getElementById('wants_overtime');
@@ -160,4 +156,4 @@
             });
         });
     </script>
-@endsection
+@endpush

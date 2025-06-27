@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Admin\PostController;
-use App\Http\Controllers\admin\UserMembershipController;
+use App\Http\Controllers\Admin\UserMembershipController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\UserController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\MembershipPurchaseController;
 use App\Models\Post;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     $latestPosts = Post::where('status', 'published')
@@ -44,6 +46,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/bookings', [AdminController::class, 'listAllBookings'])->name('booking.index');
     Route::get('/bookings/{booking}', [AdminController::class, 'show'])->name('booking.show');
     Route::resource('posts', PostController::class);
+
+     Route::prefix('purchases')->name('purchases.')->group(function() {
+        Route::get('/', [MembershipPurchaseController::class, 'index'])->name('index');
+        Route::post('/{purchase}/approve', [MembershipPurchaseController::class, 'approve'])->name('approve');
+        Route::post('/{purchase}/reject', [MembershipPurchaseController::class, 'reject'])->name('reject');
+    });
 });
 
 // user routes
@@ -64,5 +72,13 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::get('/profile', [UserController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [UserController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [UserController::class, 'updatePassword'])->name('password.update');
+
+    // Route สำหรับแสดงหน้าเลือกซื้อบัตร
+    Route::get('/purchase', [MembershipController::class, 'index'])->name('purchase.index');
+
+    // Route สำหรับดำเนินการ "ซื้อ" (สร้างบัตร)
+    Route::post('/purchase', [MembershipController::class, 'store'])->name('purchase.store');
+    Route::get('/purchase/{purchase}', [MembershipController::class, 'show'])->name('purchase.show');
+    Route::post('/purchase/{purchase}/upload-slip', [MembershipController::class, 'uploadSlip'])->name('purchase.uploadSlip');
 
 });

@@ -30,7 +30,7 @@
                                 </div>
                                 <div class="col-12">
                                     <label for="booking_date" class="form-label">ในวันที่</label>
-                                    <input type="date" class="form-control" name="booking_date" min="{{ date('Y-m-d') }}"
+                                    <input type="date" class="form-control" name="booking_date" value="{{ now()->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}"
                                         required>
                                 </div>
                                 <div class="col-md-6">

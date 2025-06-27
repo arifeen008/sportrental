@@ -79,6 +79,12 @@
                 </a>
             </li>
             <li class="nav-item mb-1">
+                <a href="{{ route('admin.purchases.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('admin.purchases.*') ? 'active' : '' }}">
+                    <i class="fas fa-money-check-alt fa-fw me-2"></i> ยืนยันการซื้อบัตร
+                </a>
+            </li>
+            <li class="nav-item mb-1">
                 <a href="{{ route('admin.posts.index') }}"
                     class="nav-link text-white {{ request()->routeIs('admin.posts.*') ? 'active' : '' }}">
                     <i class="fas fa-newspaper fa-fw me-2"></i> จัดการข่าวสาร

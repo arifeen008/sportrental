@@ -51,6 +51,13 @@
                             </a>
                         </div>
                     </div>
+                @else
+                    <p class="text-muted text-center">คุณยังไม่มีบัตรสมาชิกที่ใช้งานได้</p>
+                    <div class="text-center">
+                        <a href="{{ route('user.purchase.index') }}" class="btn btn-success">
+                            <i class="fas fa-credit-card me-2"></i> ดูและซื้อบัตรสมาชิก
+                        </a>
+                    </div>
                 @endif
 
                 <div class="card shadow-sm">
@@ -106,7 +113,8 @@
                                                         <i class="fas fa-upload me-1"></i> แจ้งชำระเงิน
                                                     </button>
                                                 @else
-                                                    <a href="{{ route('user.booking.show', $booking) }}" class="btn btn-sm btn-outline-secondary"
+                                                    <a href="{{ route('user.booking.show', $booking) }}"
+                                                        class="btn btn-sm btn-outline-secondary"
                                                         aria-disabled="true">รายละเอียด</a>
                                                 @endif
                                             </td>
@@ -196,7 +204,8 @@
                         <div class="modal-header">
                             <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i>แจ้งชำระเงินสำหรับ:
                                 {{ $booking->booking_code }}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info">
