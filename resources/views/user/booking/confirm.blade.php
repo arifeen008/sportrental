@@ -122,9 +122,16 @@
                     </div>
 
                     {{-- ส่วนแสดงเงื่อนไขการมัดจำ (จะแสดงเมื่อเป็นเหมาวันเท่านั้น) --}}
-                    @if (isset($summary['deposit_amount']))
+                   @if ($summary['booking_inputs']['booking_type'] === 'daily_package' && isset($summary['deposit_amount']))
                         <div class="alert alert-warning mt-4">
-                           ...
+                            <h5 class="alert-heading">เงื่อนไขการชำระเงิน</h5>
+                            <p class="mb-2">กรุณาชำระเงินมัดจำ 50% เพื่อยืนยันการจองของท่าน</p>
+                            <ul class="list-unstyled mb-0">
+                                <li>- ยอดมัดจำที่ต้องชำระวันนี้: <strong class="fs-5">{{ number_format($summary['deposit_amount'], 2) }} บาท</strong></li>
+                                <li>- เงินประกันสนาม: <strong>{{ number_format($summary['security_deposit'], 2) }} บาท</strong> (ชำระพร้อมยอดคงเหลือ)</li>
+                            </ul>
+                            <hr>
+                            <p class="mb-0"><small>หมายเหตุ: ยอดคงเหลือและเงินประกันสนาม ต้องชำระล่วงหน้า 5 วันก่อนวันใช้งาน</small></p>
                         </div>
                     @endif
 
