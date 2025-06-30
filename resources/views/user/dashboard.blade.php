@@ -31,10 +31,9 @@
 
         <div class="row g-4">
             <div class="col-lg-8">
-        
+
 
                 @if ($activeMembership)
-
                     <div class="card shadow-sm mb-4 text-white"
                         style="background: linear-gradient(45deg, #2a2a2a, #4a4a4a);">
                         <div class="card-body p-4">
@@ -101,17 +100,22 @@
                                     <tr>
                                         <th>รหัสการจอง</th>
                                         <th>วันที่ใช้บริการ</th>
-                                        <th>รายละเอียด</th>
+                                        <th>รายละเอียด (สนามและเวลา)</th>
                                         <th class="text-end">ยอดชำระ (บาท)</th>
                                         <th class="text-center">สถานะ</th>
-                                        <th class="text-center">จัดการ</th>
+                                        <th class="text-center" style="min-width: 150px;">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse ($myBookings as $booking)
                                         <tr>
+                                            {{-- รหัสการจอง --}}
                                             <td><strong>{{ $booking->booking_code }}</strong></td>
+
+                                            {{-- วันที่ใช้บริการ --}}
                                             <td>{{ thaidate('j M Y', $booking->booking_date) }}</td>
+
+                                            {{-- รายละเอียด (สนามและเวลา) --}}
                                             <td>
                                                 @if ($booking->booking_type === 'daily_package')
                                                     <strong>{{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}</strong>
@@ -125,28 +129,37 @@
                                                     </small>
                                                 @endif
                                             </td>
+
+                                            {{-- ยอดชำระ --}}
                                             <td class="text-end">{{ number_format($booking->total_price, 2) }}</td>
+
+                                            {{-- สถานะ --}}
                                             <td class="text-center">
-                                                @if ($booking->status == 'paid')
+                                                @if ($booking->status == 'paid' || $booking->status == 'confirmed')
                                                     <span class="badge bg-success">ชำระเงินแล้ว</span>
-                                                @elseif($booking->status == 'unpaid')
+                                                @elseif($booking->status == 'unpaid' || $booking->status == 'pending_payment')
                                                     <span class="badge bg-warning text-dark">รอชำระเงิน</span>
                                                 @elseif($booking->status == 'verifying')
                                                     <span class="badge bg-info">รอตรวจสอบ</span>
                                                 @elseif($booking->status == 'rejected')
                                                     <span class="badge bg-danger">ถูกปฏิเสธ</span>
+                                                @elseif($booking->status == 'cancelled')
+                                                    <span class="badge bg-secondary">ยกเลิกแล้ว</span>
                                                 @else
-                                                    <span class="badge bg-secondary">{{ $booking->status }}</span>
+                                                    <span class="badge bg-dark">{{ $booking->status }}</span>
                                                 @endif
                                             </td>
+
+                                            {{-- ปุ่มจัดการ --}}
                                             <td class="text-center">
-                                                @if ($booking->status == 'unpaid')
+                                                {{-- ถ้ายังไม่จ่ายเงิน ให้แสดงปุ่มแจ้งชำระเงิน --}}
+                                                @if ($booking->status == 'unpaid' || $booking->status == 'pending_payment')
                                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                                         data-bs-target="#uploadSlipModal-{{ $booking->id }}">
                                                         <i class="fas fa-upload me-1"></i> แจ้งชำระเงิน
                                                     </button>
                                                 @else
-                                                    {{-- แก้ไขชื่อ Route และลบ aria-disabled ออก --}}
+                                                    {{-- ในกรณีอื่นๆ ทั้งหมด (จ่ายแล้ว, รอตรวจ, ถูกปฏิเสธ) ให้แสดงปุ่มดูรายละเอียด --}}
                                                     <a href="{{ route('user.booking.show', $booking) }}"
                                                         class="btn btn-sm btn-outline-secondary">
                                                         <i class="fas fa-eye me-1"></i> รายละเอียด
@@ -194,7 +207,8 @@
                                         <div class="d-flex w-100">
                                             <div class="text-center me-3" style="width: 65px;">
                                                 <div class="bg-light rounded p-1 border">
-                                                    <span class="d-block small text-danger fw-bold">{{ thaidate('M', $booking->booking_date) }}</span>
+                                                    <span
+                                                        class="d-block small text-danger fw-bold">{{ thaidate('M', $booking->booking_date) }}</span>
                                                     <span class="d-block h4 mb-0">{{ $booking->booking_date->day }}</span>
                                                     <span
                                                         class="d-block small text-muted">{{ thaidate('D', $booking->booking_date) }}</span>
@@ -228,7 +242,7 @@
     </div>
 
 
-    @foreach ($myBookings->where('status', 'unpaid') as $booking)
+    @foreach ($myBookings->where('status', 'pending_payment') as $booking)
         <div class="modal fade" id="uploadSlipModal-{{ $booking->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -249,8 +263,7 @@
                                 </p>
                             </div>
                             <div class="text-center mb-3">
-                                <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป"
-                                    class="img-fluid rounded" style="max-height: 200px; display: none;">
+                                <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป" class="img-fluid rounded" style="max-height: 200px; display: none;">
                             </div>
                             <div class="mb-3">
                                 <label for="slipImage-{{ $booking->id }}" class="form-label">เลือกไฟล์รูปภาพสลิป</label>

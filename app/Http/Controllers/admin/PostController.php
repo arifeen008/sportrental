@@ -16,6 +16,14 @@ class PostController extends Controller
         return view('admin.posts.index', compact('posts'));
     }
 
+    public function posts()
+    {
+        $posts = Post::where('status', 'published')
+            ->latest('published_at')
+            ->paginate(9);
+        return view('posts.index', compact('posts'));
+    }
+
     public function create()
     {
         return view('admin.posts.create');
@@ -35,7 +43,10 @@ class PostController extends Controller
         DB::transaction(function () use ($request, $validated) {
             $coverImagePath = null;
             if ($request->hasFile('cover_image')) {
-                $coverImagePath = $request->file('cover_image')->store('posts/covers', 'public');
+                $file           = $request->file('cover_image');
+                $extension      = $file->getClientOriginalExtension();
+                $newFilename    = now()->format('YmdHis') . '.' . $extension;
+                $coverImagePath = $file->storeAs('posts/covers', $newFilename, 'public');
             }
 
             // 1. สร้าง Post หลักก่อน
@@ -51,8 +62,9 @@ class PostController extends Controller
             // 2. ถ้ามีรูปภาพประกอบอื่นๆ ให้วนลูปบันทึก
             if ($request->hasFile('other_images')) {
                 foreach ($request->file('other_images') as $file) {
-                    $path = $file->store('posts/galleries', 'public');
-                    // สร้างข้อมูลในตาราง post_images โดยผูกกับ post ที่เพิ่งสร้าง
+                    $extension   = $file->getClientOriginalExtension();
+                    $newFilename = now()->format('YmdHis') . '_' . uniqid() . '.' . $extension;
+                    $path        = $file->storeAs('posts/galleries', $newFilename, 'public');
                     $post->images()->create(['path' => $path]);
                 }
             }
@@ -75,27 +87,23 @@ class PostController extends Controller
             'image'   => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $imagePath = $post->image_path;
-        if ($request->hasFile('image')) {
-            // ลบรูปเก่า (ถ้ามี)
-            if ($post->image_path) {
-                Storage::disk('public')->delete($post->image_path);
+        $coverImagePath = $post->cover_image_path;
+        if ($request->hasFile('cover_image')) {
+            if ($post->cover_image_path) {
+                Storage::disk('public')->delete($post->cover_image_path);
             }
-            // --- ส่วนที่แก้ไข: สร้างชื่อไฟล์ใหม่ ---
-            $file        = $request->file('image');
-            $extension   = $file->getClientOriginalExtension();
-            $newFilename = now()->format('YmdHis') . '.' . $extension;
-            // อัปโหลดรูปใหม่ด้วยชื่อใหม่
-            $imagePath = $file->storeAs('posts', $newFilename, 'public');
-            // --- สิ้นสุดส่วนที่แก้ไข ---
+            $file           = $request->file('cover_image');
+            $extension      = $file->getClientOriginalExtension();
+            $newFilename    = 'cover_' . now()->format('YmdHis') . '.' . $extension;
+            $coverImagePath = $file->storeAs('posts/covers', $newFilename, 'public');
         }
 
         $post->update([
-            'title'        => $validated['title'],
-            'content'      => $validated['content'],
-            'status'       => $validated['status'],
-            'image_path'   => $imagePath, // <-- ใช้ path ที่มีชื่อไฟล์ใหม่
-            'published_at' => ($validated['status'] == 'published' && ! $post->published_at) ? now() : $post->published_at,
+            'title'            => $validated['title'],
+            'content'          => $validated['content'],
+            'status'           => $validated['status'],
+            'cover_image_path' => $coverImagePath,
+            'published_at'     => ($validated['status'] == 'published' && ! $post->published_at) ? now() : $post->published_at,
         ]);
 
         return redirect()->route('admin.posts.index')->with('success', 'อัปเดตข่าวสารสำเร็จแล้ว');

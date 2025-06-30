@@ -54,8 +54,7 @@
                                 <div class="col-md-6">
                                     <label for="booking_date_membership" class="form-label">ในวันที่</label>
                                     <input type="date" class="form-control" name="booking_date"
-                                        id="booking_date_membership" value="{{ now()->format('Y-m-d') }}"
-                                        min="{{ now()->format('Y-m-d') }}" required>
+                                        id="booking_date_membership" min="{{ now()->addDays(3)->format('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="start_time_membership" class="form-label">เวลาเริ่ม</label>
@@ -188,12 +187,12 @@
                         .then(response => response.ok ? response.json() : Promise.reject(response))
                         .then(result => {
                             if (result.available) {
-                                statusDiv.innerHTML = '✅ ช่วงเวลานี้ว่าง สามารถจองได้';
+                                statusDiv.innerHTML = `✅ ${result.message}`;
                                 statusDiv.className =
                                     'mt-2 p-2 rounded text-center fw-bold alert alert-success';
                                 submitButton.disabled = false;
                             } else {
-                                statusDiv.innerHTML = '❌ ขออภัย ช่วงเวลานี้มีผู้จองแล้ว';
+                                statusDiv.innerHTML = `❌ ${result.message}`;
                                 statusDiv.className =
                                     'mt-2 p-2 rounded text-center fw-bold alert alert-danger';
                                 submitButton.disabled = true;

@@ -161,12 +161,12 @@
                         .then(response => response.ok ? response.json() : Promise.reject(response))
                         .then(result => {
                             if (result.available) {
-                                statusDiv.innerHTML = '✅ ช่วงเวลานี้ว่าง สามารถจองได้';
+                                statusDiv.innerHTML = `✅ ${result.message}`;
                                 statusDiv.className =
                                     'mt-2 p-2 rounded text-center fw-bold alert alert-success';
                                 submitButton.disabled = false;
                             } else {
-                                statusDiv.innerHTML = '❌ ขออภัย ช่วงเวลานี้มีผู้จองแล้ว';
+                                statusDiv.innerHTML = `❌ ${result.message}`;
                                 statusDiv.className =
                                     'mt-2 p-2 rounded text-center fw-bold alert alert-danger';
                                 submitButton.disabled = true;

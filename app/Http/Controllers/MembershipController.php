@@ -37,18 +37,29 @@ class MembershipController extends Controller
 
         $tier = MembershipTier::findOrFail($request->membership_tier_id);
 
+        // 1. ใช้วันที่ปัจจุบัน
+        $today = now();
+
+        // 2. นับจำนวนการสั่งซื้อที่มีอยู่แล้วใน "วันนี้"
+        $purchasesTodayCount = MembershipPurchase::whereDate('created_at', $today->toDateString())->count();
+
+        // 3. สร้างลำดับใหม่ (นับจากของเดิม + 1)
+        $newSequence = $purchasesTodayCount + 1;
+
+        // 4. สร้าง Purchase Code รูปแบบใหม่
+        // รูปแบบ: P-ปี(2หลัก)เดือนวัน-ลำดับ เช่น P-2506301
+        $purchaseCode = 'P-' . $today->format('ymd') . $newSequence;
+
         // สร้างใบสั่งซื้อใหม่
         $purchase = MembershipPurchase::create([
             'user_id'            => Auth::id(),
             'membership_tier_id' => $tier->id,
             'price'              => $tier->price,
-            'purchase_code'      => 'P' . now()->format('ymd') . rand(1000, 9999),
+            'purchase_code'      => $purchaseCode,
             'status'             => 'pending_payment',
         ]);
 
-        // ส่งผู้ใช้ไปที่หน้ารายละเอียดการสั่งซื้อเพื่อชำระเงิน
-        // ส่งผู้ใช้ไปที่หน้ารายละเอียดการสั่งซื้อเพื่อชำระเงิน
-        return redirect()->route('user.purchase.show', $purchase);
+        return redirect()->route('user.purchase.show', compact('purchase'));
     }
 
     /**
@@ -80,20 +91,16 @@ class MembershipController extends Controller
             'slip_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // ================== START: ส่วนที่แก้ไขใหม่ ==================
-
         // 3. สร้างชื่อไฟล์ใหม่ตามที่คุณต้องการ
         $file      = $request->file('slip_image');
         $extension = $file->getClientOriginalExtension(); // ดึงนามสกุลไฟล์เดิม (เช่น .jpg, .png)
 
         // สร้างชื่อไฟล์จาก ปีเดือนวัน_รหัสการซื้อ.นามสกุล
-        $newFilename = now()->format('YmdHi') . '_purchase_' . $purchase->purchase_code . '.' . $extension;
+        $newFilename = $purchase->purchase_code . '.' . $extension;
 
         // 4. บันทึกไฟล์ด้วยชื่อใหม่ (ใช้ storeAs)
         // เก็บไฟล์ในโฟลเดอร์ 'membership_slips' บน disk ที่ชื่อว่า 'public'
         $path = $file->storeAs('membership_slips', $newFilename, 'public');
-
-        // =================== END: ส่วนที่แก้ไขใหม่ ===================
 
         // 5. อัปเดตฐานข้อมูล (ตอนนี้จะเก็บ path ที่มีชื่อไฟล์ใหม่ของเรา)
         $purchase->update([
@@ -101,7 +108,7 @@ class MembershipController extends Controller
             'status'          => 'verifying',
         ]);
 
-        // 6. (ถ้ามี) แจ้งเตือน LINE ไปหา Admin
+        // 6. แจ้งเตือน LINE ไปหา Admin
         $this->sendPurchaseNotification($purchase);
 
         // 7. ส่งกลับไปหน้า Dashboard (เหมือนเดิม)
@@ -114,14 +121,14 @@ class MembershipController extends Controller
         $groupId     = 'C8828a7ce6dd1f2f1d9ad3638489c6e9d';
         $purchase->load(['user', 'membershipTier']);
 
-        $textMessage = "💳 มีการแจ้งชำระเงินค่าบัตรสมาชิก!\n" .
-        "--------------------\n" .
-        "รหัสสั่งซื้อ: {$purchase->purchase_code}\n" .
-        "ชื่อผู้ซื้อ: {$purchase->user->name}\n" .
-        "ประเภทบัตร: {$purchase->membershipTier->tier_name}\n" .
-        "ราคา: " . number_format($purchase->price, 2) . " บาท\n" .
-            "--------------------\n" .
-            "กรุณาตรวจสอบสลิปและอนุมัติในหน้า Admin";
+        $textMessage =  "💳 มีการแจ้งชำระเงินค่าบัตรสมาชิก!\n" .
+                        "--------------------\n" .
+                        "รหัสสั่งซื้อ: {$purchase->purchase_code}\n" .
+                        "ชื่อผู้ซื้อ: {$purchase->user->name}\n" .
+                        "ประเภทบัตร: {$purchase->membershipTier->tier_name}\n" .
+                        "ราคา: " . number_format($purchase->price, 2) . " บาท\n" .
+                        "--------------------\n" .
+                        "กรุณาตรวจสอบสลิปและอนุมัติในหน้า Admin";
         $body = [
             'to'       => $groupId,
             'messages' => [['type' => 'text', 'text' => $textMessage]],

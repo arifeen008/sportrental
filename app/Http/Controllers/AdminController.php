@@ -3,10 +3,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use Illuminate\Http\Request;
-
-// <-- อย่าลืม import Model Booking
-// ใช้ Auth เพื่อเข้าถึงข้อมูลผู้ใช้
+use App\Models\UserMembership;
+use Illuminate\Http\Request; // <-- อย่าลืมเพิ่ม use statement นี้
+use Illuminate\Support\Facades\DB;
+// <-- เพิ่ม use statement นี้
 
 class AdminController extends Controller
 {
@@ -50,7 +50,7 @@ class AdminController extends Controller
     public function approve(Request $request, Booking $booking)
     {
         $booking->status = 'paid';
-        $booking->status         = 'confirmed';
+        $booking->status = 'confirmed';
         $booking->save();
 
         return redirect()->route('admin.dashboard')->with('success', 'อนุมัติการจอง #' . $booking->booking_code . ' เรียบร้อยแล้ว');
@@ -61,7 +61,7 @@ class AdminController extends Controller
     {
         $request->validate(['rejection_reason' => 'required|string|max:500']);
 
-        $booking->status   = 'rejected';
+        $booking->status           = 'rejected';
         $booking->status           = 'cancelled';
         $booking->rejection_reason = $request->input('rejection_reason');
         $booking->save();
@@ -120,12 +120,53 @@ class AdminController extends Controller
             'booking_date'      => $validated['new_booking_date'],
             'start_time'        => $validated['new_start_time'],
             'end_time'          => $validated['new_end_time'],
-            'reschedule_status' => 'rescheduled_by_admin', // บันทึกสถานะว่าถูกเลื่อนโดยแอดมิน
+            'reschedule_status' => 'rescheduled', // บันทึกสถานะว่าถูกเลื่อนโดยแอดมิน
         ]);
 
         // อาจจะเพิ่มการแจ้งเตือนกลับไปหาลูกค้าทาง Email/LINE
 
-        return redirect()->route('admin.bookings.show', $booking)->with('success', 'แก้ไขวัน/เวลาการจองเรียบร้อยแล้ว');
+        return redirect()->route('admin.booking.show', $booking)->with('success', 'แก้ไขวัน/เวลาการจองเรียบร้อยแล้ว');
+    }
+
+    /**
+     * ยกเลิกการจองโดย Admin และคืนชั่วโมงให้สมาชิก (ถ้ามี)
+     */
+    public function cancelBooking(Booking $booking)
+    {
+        try {
+            DB::transaction(function () use ($booking) {
+
+                // 1. ตรวจสอบว่าเป็นการจองด้วยบัตรสมาชิกและมีชั่วโมงให้คืนหรือไม่
+                if ($booking->booking_type === 'membership' && $booking->hours_deducted > 0) {
+
+                    // ค้นหาบัตรสมาชิกที่ใช้ในการจองครั้งนี้
+                    $membership = UserMembership::find($booking->user_membership_id);
+
+                    if ($membership) {
+                        // คืนชั่วโมงกลับเข้าบัตร
+                        $membership->remaining_hours += $booking->hours_deducted;
+
+                        // ถ้าบัตรเคยสถานะ 'used_up' ให้เปลี่ยนกลับเป็น 'active'
+                        if ($membership->status === 'used_up') {
+                            $membership->status = 'active';
+                        }
+
+                        $membership->save();
+                    }
+                }
+
+                // 2. อัปเดตสถานะการจองเป็น 'cancelled'
+                $booking->update([
+                    'status'           => 'cancelled',
+                    'rejection_reason' => 'ยกเลิกโดยแอดมิน', // เพิ่มหมายเหตุ
+                ]);
+            });
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการยกเลิกการจอง: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.booking.index')->with('success', 'ยกเลิกการจอง #' . $booking->booking_code . ' เรียบร้อยแล้ว');
     }
 
 }

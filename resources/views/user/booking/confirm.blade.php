@@ -116,11 +116,6 @@
                                 </div>
                             @endif
 
-                            {{-- สิทธิพิเศษ (แสดงตลอดเวลา) --}}
-                            <div class="list-group-item d-flex justify-content-between align-items-center text-info">
-                                <span><i class="fas fa-gift me-2"></i>สิทธิพิเศษ</span>
-                                <strong>{{ $summary['special_perks'] ?? 'ไม่มี' }}</strong>
-                            </div>
                         </div>
 
                         {{-- ส่วนแสดงเงื่อนไขการมัดจำ --}}

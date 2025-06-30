@@ -38,31 +38,26 @@
 @section('content')
     <div class="container my-5">
         <div class="row g-5">
-
             <div class="col-lg-8">
                 <article>
                     @if ($post->cover_image_path)
                         <img src="{{ Storage::url($post->cover_image_path) }}" class="img-fluid rounded shadow-lg mb-4"
                             alt="{{ $post->title }}">
                     @endif
-
                     <h1 class="display-5 fw-bold mb-3">{{ $post->title }}</h1>
                     <p class="text-muted border-bottom pb-3 mb-4">
                         <i class="fas fa-calendar-alt me-2"></i>เผยแพร่เมื่อ:
-                        {{ thaidate('lที่ j F Y', $post->published_at) }}
+                        {{ thaidate('l ที่ j F Y', $post->published_at) }}
                     </p>
-
                     <div class="post-content fs-5">
-                        {!! nl2br(e($post->content)) !!}
+                        {!! $post->content !!}
                     </div>
-
                     @if ($post->images->isNotEmpty())
                         <hr class="my-5">
                         <h3 class="mb-4">แกลเลอรีรูปภาพ</h3>
                         <div class="row g-3">
                             @foreach ($post->images as $image)
                                 <div class="col-lg-4 col-md-6">
-                                    {{-- โค้ดสำหรับ Lightbox2 --}}
                                     <a href="{{ Storage::url($image->path) }}" data-lightbox="post-gallery"
                                         data-title="{{ $post->title }}">
                                         <img src="{{ Storage::url($image->path) }}" class="gallery-image shadow-sm"
@@ -104,7 +99,6 @@
 @endsection
 
 @push('scripts')
-    {{-- เพิ่ม JavaScript ของ Lightbox2 (ต้องมี jQuery ด้วย) --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox.min.js"></script>
 @endpush

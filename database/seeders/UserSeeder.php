@@ -21,7 +21,7 @@ class UserSeeder extends Seeder
             'phone_number'      => '0812345678',    // เพิ่มเข้ามา (ใช้ข้อมูลสมมติ)
             'role'              => 'admin',
             'email_verified_at' => now(),
-            'password'          => Hash::make('12345678'),
+            'password'          => Hash::make('Aren123570'),
         ]);
 
         // 2. สร้าง User ทั่วไป
@@ -32,7 +32,7 @@ class UserSeeder extends Seeder
             'phone_number'      => '0987654321',    // เพิ่มเข้ามา (ใช้ข้อมูลสมมติ)
             'role'              => 'user',
             'email_verified_at' => now(),
-            'password'          => Hash::make('12345678'),
+            'password'          => Hash::make('Aren123570'),
         ]);
     }
 }

@@ -7,23 +7,19 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\UserMembershipController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\UserController;
-use App\Models\Post;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    $latestPosts = Post::where('status', 'published')
-        ->latest('published_at')
-        ->take(3)
-        ->get();
-    return view('welcome', compact('latestPosts'));
-});
+Route::get('/', [HomeController::class, 'index']);
 // Routes สำหรับการล็อกอิน
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
+Route::get('/posts', [PostController::class, 'posts'])->name('posts.index');
+Route::get('/pricing', [HomeController::class, 'pricing'])->name('pricing');
 Route::middleware('guest')->group(function () {
     Route::get('forgot-password', [AuthController::class, 'showLinkRequestForm'])->name('password.request');
     Route::post('forgot-password', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -58,13 +54,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('users.show');
 
     Route::patch('/booking/{booking}/reschedule', [AdminController::class, 'rescheduleBooking'])->name('booking.reschedule');
+    Route::post('/bookings/{booking}/cancel', [AdminController::class, 'cancelBooking'])->name('admin.booking.cancel');
 });
 
 // user routes
 Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(function () {
     Route::get('/dashboard', [UserController::class, 'index'])->name('dashboard');
-
-    // Route::get('/booking', [BookingController::class, 'create'])->name('booking.create');
 
     Route::get('/hourly', [BookingController::class, 'createHourly'])->name('create.hourly');
     Route::get('/package', [BookingController::class, 'createPackage'])->name('create.package');

@@ -39,7 +39,7 @@ class UserController extends Controller
             ->limit(10) // แสดงแค่ 10 รายการล่าสุด
             ->get();
 
-        // 3. ส่งแค่ 2 ตัวแปรนี้ไปที่ view
+        // 3. ส่งแค่ 3 ตัวแปรนี้ไปที่ view
         return view('user.dashboard', [
             'myBookings'        => $myBookings,
             'activeMembership'  => $activeMembership,
@@ -73,7 +73,7 @@ class UserController extends Controller
 
         // ถ้ามีการเปลี่ยนอีเมล ให้สถานะการยืนยันอีเมลกลับเป็น null
         if ($user->isDirty('email')) {
-            // $user->email_verified_at = null;
+            $user->email_verified_at = null;
         }
 
         $user->save();

@@ -3,18 +3,18 @@
     <h1 class="h3 mb-4">เขียนข่าวใหม่</h1>
     <div class="card shadow-sm">
         <div class="card-body">
-            <form action="{{ route('admin.posts.store') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('admin.posts.update',$post) }}" method="POST" enctype="multipart/form-data">
                 @csrf
+                @method('PUT')
                 <div class="mb-3">
                     <label for="title" class="form-label">หัวข้อข่าว</label>
-                    <input type="text" name="title" id="title" class="form-control" required>
+                    <input type="text" name="title" id="title" class="form-control" value="{{$post->title}}" required>
                 </div>
                 <div class="mb-3">
                     <label for="content_editor" class="form-label">เนื้อหา</label>
-                    <textarea name="content" id="summernote" class="form-control" rows="15"></textarea>
+                    <textarea name="content" id="summernote" class="form-control" rows="15">{{ old('content', $post->content) }}</textarea>
                 </div>
 
-                {{-- ส่วนอัปโหลดรูปภาพใหม่ --}}
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="cover_image" class="form-label"><b>รูปหน้าปก (Cover Image)</b></label>
@@ -30,7 +30,6 @@
                 <div class="mb-3">
                     <label for="status" class="form-label">สถานะ</label>
                     <select name="status" id="status" class="form-select">
-                        <option value="draft">บันทึกเป็นฉบับร่าง</option>
                         <option value="published">เผยแพร่ทันที</option>
                     </select>
                 </div>

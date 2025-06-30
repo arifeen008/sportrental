@@ -67,8 +67,7 @@ class BookingController extends Controller
 
         $bookingType = $request->input('booking_type');
 
-                           // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
-        $isBooked = false; // กำหนดค่าเริ่มต้น
+        // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
         $isBooked = false; // กำหนดค่าเริ่มต้น
         if ($bookingType === 'hourly' || $bookingType === 'membership') {
             $validated = $request->validate(['field_type_id' => 'required', 'start_time' => 'required', 'end_time' => 'required']);
@@ -116,9 +115,6 @@ class BookingController extends Controller
         try {
             // ใช้ Transaction เพื่อให้แน่ใจว่าถ้ามีขั้นตอนไหนพลาด จะยกเลิกทั้งหมด
             $booking = DB::transaction(function () use ($request) {
-
-                // --- START: ส่วนสร้าง Booking Code ใหม่ ---
-
                 // 1. ดึงวันที่จองจากฟอร์ม
                 $bookingDate = Carbon::parse($request->input('booking_date'));
 
@@ -135,7 +131,7 @@ class BookingController extends Controller
                 $bookingType = $request->input('booking_type');
                 $dataToSave  = [
                     'user_id'            => Auth::id(),
-                    'booking_code'       => $bookingCode, // <-- ใช้รหัสใหม่ที่เราเพิ่งสร้าง
+                    'booking_code'       => $bookingCode,
                     'booking_type'       => $bookingType,
                     'booking_date'       => $bookingDate,
                     'notes'              => $request->input('notes'),
@@ -172,6 +168,16 @@ class BookingController extends Controller
                     $dataToSave['price_calculation_details'] = ['rental_type' => $request->input('rental_type'), 'package_name' => $request->input('package_name')];
                 }
 
+                if ($bookingType === 'membership') {
+                    // ถ้าใช้บัตรสมาชิก ให้สถานะเป็น 'paid' (จ่ายแล้ว) และ 'confirmed' ทันที
+                    $dataToSave['status']     = 'paid';
+                    $dataToSave['expires_at'] = null; // ไม่มีการหมดเวลา
+                } else {
+                    // ประเภทอื่น ให้เป็น 'pending_payment' เพื่อเข้าสู่กระบวนการชำระเงิน
+                    $dataToSave['status']     = 'pending_payment';
+                    $dataToSave['expires_at'] = now()->addMinutes(15);
+                }
+
                 // 7. สร้างการจองด้วยข้อมูลทั้งหมดในครั้งเดียว
                 $booking = Booking::create($dataToSave);
 
@@ -189,9 +195,12 @@ class BookingController extends Controller
             });
 
             // Redirect ไปหน้าชำระเงิน
-            return redirect()->route('booking.payment', $booking);
-
-        } catch (\Exception $e) {
+            if ($booking->status === 'pending_payment') {
+                return redirect()->route('user.booking.payment', $booking);
+            }
+            $this->pushMessageToGroupFromBooking($booking);
+            return redirect()->route('user.dashboard')->with('success', 'การจองด้วยบัตรสมาชิกสำเร็จแล้ว! รหัสการจองคือ ' . $booking->booking_code);
+        } catch (Exception $e) {
             return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการสร้างการจอง: ' . $e->getMessage())->withInput();
         }
     }
@@ -217,8 +226,7 @@ class BookingController extends Controller
         // 4. สร้างชื่อและจัดเก็บไฟล์
         $file      = $request->file('slip_image');
         $extension = $file->getClientOriginalExtension();
-        // แก้ไข: ใช้ booking_code เพื่อให้แน่ใจว่าไม่ซ้ำกับ ID อื่นๆ
-        $newFilename = now()->format('YmdHis') . $booking->booking_code . '.' . $extension;
+        $newFilename = $booking->booking_code . '.' . $extension;
         $path        = $file->storeAs('slips', $newFilename, 'public');
 
         // 5. อัปเดตฐานข้อมูล
@@ -447,7 +455,6 @@ class BookingController extends Controller
             'hours_to_deduct'    => $hoursToDeduct,
             'user_membership_id' => $membership->id,
             'total_price'        => 0,
-            'special_perks'      => $tier->special_perks,
             'discount_amount'    => 0,
             'discount_reason'    => null,
         ];
@@ -583,58 +590,26 @@ class BookingController extends Controller
             'end_time'      => 'required|date_format:H:i|after:start_time',
         ]);
 
+        $bookingDate = Carbon::parse($validated['booking_date']);
+        if ($bookingDate->isMonday()) {
+            return response()->json([
+                'available' => false,
+                'message'   => 'ขออภัย สนามปิดให้บริการทุกวันจันทร์', // ส่งเหตุผลกลับไปด้วย
+            ]);
+        }
+
         $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
             ->where('booking_date', $validated['booking_date'])
-        // ▼▼▼ ส่วนที่แก้ไข: เช็คทุกสถานะที่ถือว่า "ไม่ว่าง" ▼▼▼
             ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
-        // ▲▲▲ สิ้นสุดส่วนที่แก้ไข ▲▲▲
             ->where('start_time', '<', $validated['end_time'])
             ->where('end_time', '>', $validated['start_time'])
             ->exists();
 
-        return response()->json(['available' => ! $isBooked]);
-    }
-
-    // ใน BookingController.php
-
-    public function requestReschedule(Request $request, Booking $booking)
-    {
-        // ตรวจสอบสิทธิ์
-        if ($booking->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        // ตรวจสอบข้อมูลที่ส่งมา
-        $validated = $request->validate([
-            'new_booking_date'  => 'required|date|after_or_equal:today',
-            'new_start_time'    => 'required|date_format:H:i',
-            'new_end_time'      => 'required|date_format:H:i|after:new_start_time',
-            'reschedule_reason' => 'required|string|max:500',
+        $message = $isBooked ? 'ขออภัย ช่วงเวลานี้มีผู้จองแล้ว' : 'ช่วงเวลานี้ว่าง สามารถจองได้';
+        return response()->json([
+            'available' => ! $isBooked,
+            'message'   => $message, // ส่งข้อความสถานะกลับไปเสมอ
         ]);
-
-        // ตรวจสอบว่าเวลาใหม่ว่างหรือไม่
-        $isBooked = Booking::where('id', '!=', $booking->id)
-            ->where('field_type_id', $booking->field_type_id)
-            ->where('booking_date', $validated['new_booking_date'])
-            ->where('status', 'paid')
-            ->where('start_time', '<', $validated['new_end_time'])
-            ->where('end_time', '>', $validated['new_start_time'])
-            ->exists();
-
-        if ($isBooked) {
-            return redirect()->back()->with('error', 'ขออภัย ช่วงเวลาใหม่ที่ท่านเลือกมีผู้จองแล้ว');
-        }
-
-        // อัปเดตการจองด้วยข้อมูลคำขอเลื่อน
-        $booking->update([
-            'reschedule_status' => 'requested',
-            'new_booking_date'  => $validated['new_booking_date'],
-            'new_start_time'    => $validated['new_start_time'],
-            'new_end_time'      => $validated['new_end_time'],
-            'reschedule_reason' => $validated['reschedule_reason'],
-        ]);
-
-        return redirect()->route('dashboard')->with('success', 'ส่งคำขอเลื่อนวันจองสำเร็จแล้ว โปรดรอการยืนยันจากเจ้าหน้าที่');
     }
 
     public function showPayment(Booking $booking)
@@ -651,7 +626,6 @@ class BookingController extends Controller
 
         // 3. ตรวจสอบว่าหมดเวลาหรือยัง
         if (Carbon::parse($booking->expires_at)->isPast()) {
-            // (ในระบบจริง Scheduler จะเปลี่ยนสถานะเป็น cancelled)
             // แต่เราดักไว้ก่อนเพื่อแสดงข้อความที่ชัดเจน
             return redirect()->route('user.dashboard')->with('error', 'การจองนี้หมดเวลาในการชำระเงินแล้ว');
         }

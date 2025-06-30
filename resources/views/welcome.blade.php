@@ -65,8 +65,7 @@
                             <h5 class="card-title">สนามกลางแจ้ง</h5>
                             <p class="card-text">สัมผัสบรรยากาศการเล่นฟุตบอลแบบ Open-air บนพื้นหญ้าเทียมมาตรฐาน
                                 พร้อมระบบไฟส่องสว่างสำหรับช่วงเวลากลางคืน</p>
-                            {{-- <a href="{{ route('user.booking.create') }}"
-                                class="btn btn-outline-primary">ดูรายละเอียดและจอง</a> --}}
+                        
                         </div>
                     </div>
                 </div>
@@ -78,8 +77,7 @@
                             <h5 class="card-title">สนามในร่ม (มีหลังคา)</h5>
                             <p class="card-text">ไม่ต้องกังวลกับสภาพอากาศ เล่นได้ทุกเวลา แดดไม่ร้อน ฝนไม่เปียก
                                 เหมาะสำหรับการแข่งขันและเล่นกับเพื่อนฝูง</p>
-                            {{-- <a href="{{ route('user.booking.create') }}"
-                                class="btn btn-outline-primary">ดูรายละเอียดและจอง</a> --}}
+            
                         </div>
                     </div>
                 </div>
@@ -116,7 +114,60 @@
                     </table>
                 </div>
                 <div class="text-center mt-3">
-                    <a href="#" class="btn btn-link">ดูรายละเอียดราคาและโปรโมชันทั้งหมด</a>
+                    <a href="{{ route('pricing') }}" class="btn btn-link">ดูรายละเอียดราคาและโปรโมชันทั้งหมด</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <h2 class="text-center section-title fw-bold">ตารางคิวสนาม (7 วันข้างหน้า)</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>วันที่</th>
+                                        <th>เวลา</th>
+                                        <th>สนาม</th>
+                                        <th class="text-center">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($upcomingBookings as $booking)
+                                        <tr>
+                                            <td>
+                                                <strong>{{ thaidate('l', $booking->booking_date) }}</strong><br>
+                                                <small
+                                                    class="text-muted">{{ thaidate('j M Y', $booking->booking_date) }}</small>
+                                            </td>
+                                            <td>{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
+                                                {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</td>
+                                            <td>
+                                                @if ($booking->booking_type === 'daily_package')
+                                                    {{ $booking->price_calculation_details['package_name'] ?? 'เหมาวัน' }}
+                                                @else
+                                                    {{ optional($booking->fieldType)->name ?? 'ไม่ระบุ' }}
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-danger">จองแล้ว</span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted p-4">
+                                                ยังไม่มีคิวจองที่ยืนยันแล้วใน 7 วันข้างหน้า
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -162,7 +213,7 @@
 
             {{-- อาจจะเพิ่มปุ่มเพื่อไปดูข่าวทั้งหมดในอนาคต --}}
             <div class="text-center mt-5">
-                <a href="#" class="btn btn-outline-primary">ดูข่าวสารทั้งหมด</a>
+                <a href="{{ route('posts.index') }}" class="btn btn-outline-primary">ดูข่าวสารทั้งหมด</a>
             </div>
 
         </div>

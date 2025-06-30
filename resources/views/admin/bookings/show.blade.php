@@ -31,10 +31,8 @@
                     <dl class="row summary-dl mb-0">
                         <dt class="col-sm-4">รหัสการจอง</dt>
                         <dd class="col-sm-8">{{ $booking->booking_code }}</dd>
-
                         <dt class="col-sm-4">วันที่ใช้บริการ</dt>
                         <dd class="col-sm-8">{{ thaidate('lที่ j F Y', $booking->booking_date) }}</dd>
-
                         <dt class="col-sm-4">เวลา</dt>
                         <dd class="col-sm-8">{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
                             {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }} น.</dd>
@@ -129,13 +127,65 @@
                     @endif
                 </div>
             </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">การดำเนินการ</h5>
+                </div>
+                <div class="card-body text-center">
+                    @if ($booking->status === 'verifying')
+                        <p class="text-muted">โปรดตรวจสอบข้อมูลและสลิปก่อนดำเนินการ</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <form action="{{ route('admin.booking.approve', $booking) }}" method="POST" onsubmit="return confirm('ยืนยันการอนุมัติการจอง #{{ $booking->booking_code }}?');">
+                                @csrf
+                                <button type="submit" class="btn btn-success"><i
+                                        class="fas fa-check-circle me-2"></i>อนุมัติ</button>
+                            </form>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+                                data-bs-target="#rejectModal-{{ $booking->id }}">
+                                <i class="fas fa-times-circle me-2"></i>ปฏิเสธ
+                            </button>
+                        </div>
+                    @elseif($booking->status === 'paid' && $booking->booking_date->isFuture())
+                        <div class="alert alert-success border-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            การจองนี้ได้รับการอนุมัติเรียบร้อยแล้ว
+                        </div>
+                        <hr>
+                        <p class="text-muted small">ใช้ฟังก์ชันด้านล่างเพื่อแก้ไข หรือยกเลิกการจองนี้</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                                data-bs-target="#rescheduleModal">
+                                <i class="fas fa-edit me-2"></i>แก้ไขวัน/เวลา
+                            </button>
+                            <form action="{{ route('admin.booking.cancel', $booking) }}" method="POST" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? (การดำเนินการนี้จะคืนชั่วโมงให้สมาชิก ถ้ามี) และไม่สามารถย้อนกลับได้')">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="fas fa-trash-alt me-2"></i>ยกเลิกการจอง
+                                </button>
+                            </form>
+                        </div>
+                    @elseif($booking->status === 'cancelled' || $booking->status === 'rejected')
+                        <div class="alert alert-danger">
+                            การจองนี้ถูกยกเลิก/ปฏิเสธไปแล้ว
+                            @if ($booking->rejection_reason)
+                                <hr>
+                                <p class="mb-0"><strong>เหตุผล:</strong> {{ $booking->rejection_reason }}</p>
+                            @endif
+                        </div>
+                    @else
+                        <p class="text-muted">การจองนี้เสร็จสิ้น หรือยังไม่มีการดำเนินการ</p>
+                    @endif
+                </div>
+            </div>
             <div class="card shadow-sm mt-4">
                 <div class="card-header">
                     <h5 class="mb-0">แก้ไขวัน/เวลาจอง</h5>
                 </div>
                 <div class="card-body text-center">
                     <p class="text-muted small">ใช้ฟังก์ชันนี้ในกรณีที่ลูกค้าติดต่อขอเลื่อนวันหรือเวลา</p>
-                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#rescheduleModal">
+                    <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                        data-bs-target="#rescheduleModal">
                         <i class="fas fa-edit me-2"></i>แก้ไขการจอง
                     </button>
                 </div>
@@ -167,7 +217,7 @@
             <div class="modal-content">
                 <form action="{{ route('admin.booking.reschedule', $booking) }}" method="POST">
                     @csrf
-                    @method('PATCH') {{-- ใช้ PATCH สำหรับการอัปเดต --}}
+                    @method('PATCH')
                     <div class="modal-header">
                         <h5 class="modal-title">แก้ไขการจอง: {{ $booking->booking_code }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
