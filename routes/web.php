@@ -87,6 +87,6 @@ Route::middleware(['auth', 'user'])->prefix('user')->name('user.')->group(functi
     Route::get('/purchase/{purchase}', [MembershipController::class, 'show'])->name('purchase.show');
     Route::post('/purchase/{purchase}/upload-slip', [MembershipController::class, 'uploadSlip'])->name('purchase.uploadSlip');
 
-
+    Route::get('/booking/{booking}/payment', [BookingController::class, 'showPayment'])->name('booking.payment');
 
 });

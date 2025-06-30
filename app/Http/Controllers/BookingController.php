@@ -59,63 +59,66 @@ class BookingController extends Controller
     }
     public function confirm(Request $request)
     {
-
+        // --- 1. ตรวจสอบเงื่อนไขทางธุรกิจ (วันจันทร์, จองคร่อมเวลา) ---
         $bookingDate = Carbon::parse($request->input('booking_date'));
         if ($bookingDate->isMonday()) {
             return redirect()->back()->with('error', 'ขออภัย สนามปิดให้บริการทุกวันจันทร์')->withInput();
         }
-
-        $bookingType = $request->input('booking_type');
-        if ($bookingType === 'hourly' || $bookingType === 'membership') {
-            $startTime    = $request->input('start_time');
-            $endTime      = $request->input('end_time');
-            $boundaryTime = '18:00:00';
-
-            // เช็คว่าเวลาเริ่มต้นอยู่ก่อน 18:00 และเวลาสิ้นสุดอยู่หลัง 18:00 หรือไม่
-            if ($startTime < $boundaryTime && $endTime > $boundaryTime) {
-                return redirect()->back()->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้ กรุณาแยกทำ 2 รายการจอง')->withInput();
-            }
+        if ($request->input('start_time') < '18:00:00' && $request->input('end_time') > '18:00:00') {
+            return redirect()->back()->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้')->withInput();
         }
 
-        $bookingType = $request->input('booking_type');
-        $summary     = ['booking_inputs' => $request->all()];
+        // --- 2. ตรวจสอบความว่างของสนาม (รอบสุดท้ายก่อนสร้างการจอง) ---
+        $isBooked = Booking::where('field_type_id', $request->input('field_type_id'))
+            ->where('booking_date', $request->input('booking_date'))
+            ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
+            ->where('start_time', '<', $request->input('end_time'))
+            ->where('end_time', '>', $request->input('start_time'))
+            ->exists();
 
+        if ($isBooked) {
+            return redirect()->back()->with('error', 'ขออภัย ช่วงเวลานี้มีผู้จองแล้ว กรุณาเลือกเวลาใหม่')->withInput();
+        }
+
+        // --- 3. คำนวณราคาและรายละเอียด (ดึง Logic มาจากเมธอดเดิม) ---
+        $summary = [];
+        if ($request->input('booking_type') === 'hourly') {
+            $summary = $this->calculateHourlyRate($request);
+        } // ... เพิ่มสำหรับ package และ membership ตามลำดับ ...
+
+        // --- 4. ถ้าทุกอย่างถูกต้อง ให้สร้างการจองใหม่เพื่อ "กันเวลา" ---
         try {
-            if ($bookingType === 'hourly' || $bookingType === 'membership') {
+            $booking = DB::transaction(function () use ($request, $summary) {
 
-                $validated = $request->validate([
-                    'field_type_id' => 'required|exists:field_types,id',
-                    'booking_date'  => 'required|date',
-                    'start_time'    => 'required|date_format:H:i',
-                    'end_time'      => 'required|date_format:H:i|after:start_time',
-                ]);
+                $dataToSave = [
+                    'user_id'           => Auth::id(),
+                    'booking_type'      => $request->input('booking_type'),
+                    'field_type_id'     => $request->input('field_type_id'),
+                    'booking_date'      => $request->input('booking_date'),
+                    'start_time'        => $request->input('start_time'),
+                    'end_time'          => $request->input('end_time'),
+                    'notes'             => $request->input('notes'),
+                    'duration_in_hours' => $summary['duration_in_hours'] ?? 0,
+                    'base_price'        => $summary['subtotal_price'] ?? ($summary['base_price'] ?? 0),
+                    'discount'          => $summary['discount_amount'] ?? 0,
+                    'total_price'       => $summary['total_price'],
+                    'status'            => 'pending_payment',     // <-- สถานะใหม่ "รอชำระเงิน"
+                    'expires_at'        => now()->addMinutes(15), // <-- กำหนดเวลาหมดอายุ 15 นาที
+                ];
 
-                $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
-                    ->where('booking_date', $validated['booking_date'])
-                    ->where('payment_status', 'paid')
-                    ->where('start_time', '<', $validated['end_time'])
-                    ->where('end_time', '>', $validated['start_time'])
-                    ->exists();
+                $booking               = Booking::create($dataToSave);
+                $booking->booking_code = now()->format('ymd') . '-' . $booking->id;
+                $booking->save();
 
-                if ($isBooked) {
-                    return redirect()->back()
-                        ->with('error', 'ช่วงเวลาที่ท่านเลือกมีผู้จองแล้ว กรุณาเลือกเวลาใหม่')
-                        ->withInput();
-                }
-            }
+                return $booking;
+            });
 
-            if ($bookingType === 'hourly') {
-                $summary = array_merge($summary, $this->calculateHourlyRate($request));
-            } elseif ($bookingType === 'daily_package') {
-                $summary = array_merge($summary, $this->calculatePackageRate($request));
-            } elseif ($bookingType === 'membership') {
-                $summary = array_merge($summary, $this->calculateMembershipUsage($request));
-            }
+            // 5. ส่งผู้ใช้ไปยังหน้าชำระเงินใหม่ พร้อมกับ ID ของการจอง
+            return redirect()->route('user.booking.payment', $booking);
+
         } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการสร้างการจอง: ' . $e->getMessage());
         }
-
-        return view('user.booking.confirm', compact('summary'));
     }
 
     public function store(Request $request)
@@ -580,7 +583,6 @@ class BookingController extends Controller
  */
     public function checkAvailability(Request $request)
     {
-        // 1. ตรวจสอบข้อมูลที่ส่งมา
         $validated = $request->validate([
             'field_type_id' => 'required|exists:field_types,id',
             'booking_date'  => 'required|date',
@@ -588,60 +590,67 @@ class BookingController extends Controller
             'end_time'      => 'required|date_format:H:i|after:start_time',
         ]);
 
-        // 2. ค้นหาการจองที่ "จ่ายเงินแล้ว" และมีเวลาซ้อนทับกัน
-        // เงื่อนไขการซ้อนทับคือ: (เวลาเริ่มของเรา < เวลาสิ้นสุดของเขา) AND (เวลาสิ้นสุดของเรา > เวลาเริ่มของเขา)
         $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
             ->where('booking_date', $validated['booking_date'])
-            ->where('payment_status', 'paid') // เช็คเฉพาะการจองที่จ่ายเงินและอนุมัติแล้ว
+        // --- ส่วนที่แก้ไข: เช็คสถานะทั้งหมดที่ถือว่า "ไม่ว่าง" ---
+        // pending_payment คือสถานะที่ถูก "กันเวลา" ไว้ชั่วคราว
+            ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
+        // ----------------------------------------------------
             ->where('start_time', '<', $validated['end_time'])
             ->where('end_time', '>', $validated['start_time'])
-            ->exists(); // ใช้ exists() เพื่อความเร็วสูงสุด
+            ->exists();
 
-        // 3. ส่งผลลัพธ์กลับไปเป็น JSON
-        return response()->json([
-            'available' => ! $isBooked, // ถ้าเจอ ($isBooked=true) แปลว่าไม่ว่าง (available=false)
-        ]);
+        return response()->json(['available' => ! $isBooked]);
     }
 
     // ใน BookingController.php
 
-public function requestReschedule(Request $request, Booking $booking)
-{
-    // ตรวจสอบสิทธิ์
-    if ($booking->user_id !== Auth::id()) {
-        abort(403);
+    public function requestReschedule(Request $request, Booking $booking)
+    {
+        // ตรวจสอบสิทธิ์
+        if ($booking->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // ตรวจสอบข้อมูลที่ส่งมา
+        $validated = $request->validate([
+            'new_booking_date'  => 'required|date|after_or_equal:today',
+            'new_start_time'    => 'required|date_format:H:i',
+            'new_end_time'      => 'required|date_format:H:i|after:new_start_time',
+            'reschedule_reason' => 'required|string|max:500',
+        ]);
+
+        // ตรวจสอบว่าเวลาใหม่ว่างหรือไม่
+        $isBooked = Booking::where('id', '!=', $booking->id)
+            ->where('field_type_id', $booking->field_type_id)
+            ->where('booking_date', $validated['new_booking_date'])
+            ->where('payment_status', 'paid')
+            ->where('start_time', '<', $validated['new_end_time'])
+            ->where('end_time', '>', $validated['new_start_time'])
+            ->exists();
+
+        if ($isBooked) {
+            return redirect()->back()->with('error', 'ขออภัย ช่วงเวลาใหม่ที่ท่านเลือกมีผู้จองแล้ว');
+        }
+
+        // อัปเดตการจองด้วยข้อมูลคำขอเลื่อน
+        $booking->update([
+            'reschedule_status' => 'requested',
+            'new_booking_date'  => $validated['new_booking_date'],
+            'new_start_time'    => $validated['new_start_time'],
+            'new_end_time'      => $validated['new_end_time'],
+            'reschedule_reason' => $validated['reschedule_reason'],
+        ]);
+
+        return redirect()->route('dashboard')->with('success', 'ส่งคำขอเลื่อนวันจองสำเร็จแล้ว โปรดรอการยืนยันจากเจ้าหน้าที่');
     }
 
-    // ตรวจสอบข้อมูลที่ส่งมา
-    $validated = $request->validate([
-        'new_booking_date' => 'required|date|after_or_equal:today',
-        'new_start_time' => 'required|date_format:H:i',
-        'new_end_time' => 'required|date_format:H:i|after:new_start_time',
-        'reschedule_reason' => 'required|string|max:500',
-    ]);
-    
-    // ตรวจสอบว่าเวลาใหม่ว่างหรือไม่
-    $isBooked = Booking::where('id', '!=', $booking->id)
-        ->where('field_type_id', $booking->field_type_id)
-        ->where('booking_date', $validated['new_booking_date'])
-        ->where('payment_status', 'paid')
-        ->where('start_time', '<', $validated['new_end_time'])
-        ->where('end_time', '>', $validated['new_start_time'])
-        ->exists();
-
-    if ($isBooked) {
-        return redirect()->back()->with('error', 'ขออภัย ช่วงเวลาใหม่ที่ท่านเลือกมีผู้จองแล้ว');
+    public function showPayment(Booking $booking)
+    {
+        // ตรวจสอบสิทธิ์และสถานะ
+        if ($booking->user_id !== Auth::id() || $booking->status !== 'pending_payment') {
+            abort(404);
+        }
+        return view('user.booking.payment', compact('booking'));
     }
-
-    // อัปเดตการจองด้วยข้อมูลคำขอเลื่อน
-    $booking->update([
-        'reschedule_status' => 'requested',
-        'new_booking_date' => $validated['new_booking_date'],
-        'new_start_time' => $validated['new_start_time'],
-        'new_end_time' => $validated['new_end_time'],
-        'reschedule_reason' => $validated['reschedule_reason'],
-    ]);
-
-    return redirect()->route('dashboard')->with('success', 'ส่งคำขอเลื่อนวันจองสำเร็จแล้ว โปรดรอการยืนยันจากเจ้าหน้าที่');
-}
 }
