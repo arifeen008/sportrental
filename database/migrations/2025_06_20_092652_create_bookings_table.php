@@ -12,39 +12,46 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('bookings', function (Blueprint $table) {
+            // === ข้อมูลหลัก ===
             $table->id();
+            $table->string('booking_code')->unique()->nullable();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('field_type_id')->nullable()->constrained('field_types');
 
-            // --- ข้อมูลหลัก: ใคร จองอะไร ---
-            $table->foreignId('user_id')->constrained('users')->comment('ผู้ที่ทำการจอง');
-            $table->foreignId('field_type_id')->constrained('field_types')->comment('ประเภทสนามที่จอง');
+            // === ข้อมูลการจอง ===
+            $table->string('booking_type');
+            $table->date('booking_date');
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->integer('duration_in_hours')->nullable();
 
-            // --- ข้อมูลเวลา: จองวันไหน เวลาไหนถึงไหน ---
-            $table->date('booking_date')->comment('วันที่ต้องการใช้สนาม');
-            $table->time('start_time')->comment('เวลาเริ่มใช้สนาม');
-            $table->time('end_time')->comment('เวลาสิ้นสุดการใช้สนาม');
+            // === สถานะ (รวมทุกอย่างไว้ในคอลัมน์เดียว) ===
+            $table->string('status')->default('pending_payment'); // pending_payment, verifying, paid, rejected, cancelled, completed
+            $table->timestamp('expires_at')->nullable()->comment('เวลาหมดอายุสำหรับสถานะ pending_payment');
 
-            // --- ประเภทการจองและสถานะ ---
-            $table->string('booking_type')->comment("ประเภทการจอง เช่น 'hourly', 'daily_package', 'membership'");
-            $table->string('status')->default('pending')->comment("สถานะการจอง เช่น 'pending', 'confirmed', 'completed', 'cancelled'");
+            // === ข้อมูลการเงิน ===
+            $table->decimal('base_price', 10, 2)->default(0);
+            $table->decimal('overtime_charges', 10, 2)->default(0);
+            $table->decimal('other_charges', 10, 2)->default(0); // เผื่อไว้ในอนาคต
+            $table->decimal('discount', 10, 2)->default(0);
+            $table->decimal('total_price', 10, 2);
 
-            // --- ข้อมูลด้านการเงิน: เก็บรายละเอียดราคาที่คำนวณได้ ---
-            $table->decimal('base_price', 10, 2)->default(0)->comment('ราคาพื้นฐานตามแพ็กเกจ/รายชั่วโมง');
-            $table->decimal('overtime_charges', 10, 2)->default(0)->comment('ค่าใช้จ่ายล่วงเวลา (ถ้ามี)');
-            $table->decimal('other_charges', 10, 2)->default(0)->comment('ค่าใช้จ่ายอื่นๆ (ถ้ามี)');
-            $table->decimal('discount', 10, 2)->default(0)->comment('ส่วนลด');
-            $table->decimal('total_price', 10, 2)->comment('ราคาสุทธิที่ต้องชำระ');
-            $table->string('payment_status')->default('unpaid')->comment("สถานะการชำระเงิน เช่น 'unpaid', 'paid', 'refunded'");
+            // === ข้อมูลการชำระเงิน และ บัตรสมาชิก ===
+            $table->string('slip_image_path')->nullable();
+            $table->unsignedBigInteger('user_membership_id')->nullable();
+            $table->decimal('hours_deducted', 4, 2)->nullable();
 
-            // --- ส่วนเฉพาะสำหรับการจองโดยใช้บัตรสมาชิก ---
-            // หมายเหตุ: user_membership_id จะอ้างอิงถึงตารางที่เก็บว่า user คนไหนถือบัตรสมาชิกใบไหน ซึ่งอาจจะต้องสร้างในอนาคต
-            $table->unsignedBigInteger('user_membership_id')->nullable()->comment('ID ของบัตรสมาชิกที่ใช้จอง (ถ้ามี)');
-            $table->decimal('hours_deducted', 4, 2)->nullable()->comment('จำนวนชั่วโมงที่ถูกหักจากบัตรสมาชิก');
+            // === ข้อมูลการขอเลื่อนวัน ===
+            $table->string('reschedule_status')->nullable(); // requested, approved, rejected
+            $table->text('reschedule_reason')->nullable();
+            $table->date('new_booking_date')->nullable();
+            $table->time('new_start_time')->nullable();
+            $table->time('new_end_time')->nullable();
 
-            // --- ข้อมูลเพิ่มเติม ---
-            $table->text('notes')->nullable()->comment('หมายเหตุเพิ่มเติมจากการจอง');
-            $table->json('price_calculation_details')->nullable()->comment('เก็บรายละเอียดกฎราคาที่ใช้คำนวณ (สำหรับตรวจสอบ)');
-
-            $table->timestamps(); // created_at คือวันที่ทำการจอง
+            // === ข้อมูลเพิ่มเติม ===
+            $table->text('notes')->nullable();
+            $table->json('price_calculation_details')->nullable();
+            $table->timestamps();
         });
     }
 

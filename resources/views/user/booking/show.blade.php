@@ -21,11 +21,11 @@
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span>สถานะการชำระเงิน:</span>
                                     <strong>
-                                        @if($booking->payment_status == 'paid') <span class="badge bg-success">ชำระเงินแล้ว</span>
-                                        @elseif($booking->payment_status == 'unpaid') <span class="badge bg-warning text-dark">รอชำระเงิน</span>
-                                        @elseif($booking->payment_status == 'verifying') <span class="badge bg-info">รอตรวจสอบ</span>
-                                        @elseif($booking->payment_status == 'rejected') <span class="badge bg-danger">ถูกปฏิเสธ</span>
-                                        @else <span class="badge bg-secondary">{{ $booking->payment_status }}</span>
+                                        @if($booking->status == 'paid') <span class="badge bg-success">ชำระเงินแล้ว</span>
+                                        @elseif($booking->status == 'unpaid') <span class="badge bg-warning text-dark">รอชำระเงิน</span>
+                                        @elseif($booking->status == 'verifying') <span class="badge bg-info">รอตรวจสอบ</span>
+                                        @elseif($booking->status == 'rejected') <span class="badge bg-danger">ถูกปฏิเสธ</span>
+                                        @else <span class="badge bg-secondary">{{ $booking->status }}</span>
                                         @endif
                                     </strong>
                                 </li>
@@ -81,7 +81,7 @@
                                     </div>
                                 </div>
                             @endif
-                            @if($booking->payment_status === 'rejected' && $booking->rejection_reason)
+                            @if($booking->status === 'rejected' && $booking->rejection_reason)
                                 <div class="alert alert-danger mt-3">
                                     <strong>เหตุผลที่ถูกปฏิเสธ:</strong> {{ $booking->rejection_reason }}
                                 </div>

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
@@ -16,13 +15,13 @@ class UserController extends Controller
 {
     public function index()
     {
-        $userId = Auth::id(); // ดึง ID ของผู้ใช้ที่ล็อกอินอยู่
+        $userId = Auth::id();
 
-        // 1. ดึงข้อมูลการจอง "ทั้งหมด" ของผู้ใช้ที่ Login อยู่
-        $myBookings = Booking::where('user_id', Auth::id())
-            ->with('fieldType')    // โหลดข้อมูลสนามมาด้วย
+        // 1. ดึงข้อมูลการจอง "ทั้งหมด" ของผู้ใช้ที่ Login อยู่เท่านั้น
+        $myBookings = Booking::where('user_id', $userId)
+            ->with('fieldType')
             ->latest('created_at') // เรียงตามการจองล่าสุด
-            ->paginate(10);        // แบ่งหน้าแสดงผลทีละ 10 รายการ
+            ->paginate(10);        // แบ่งหน้าแสดงผล
 
         // 2. ดึงข้อมูลบัตรสมาชิกที่ยัง Active อยู่ของผู้ใช้
         $activeMembership = UserMembership::where('user_id', $userId)
@@ -32,16 +31,15 @@ class UserController extends Controller
             ->with('membershipTier')
             ->first();
 
-        // 3. ดึงข้อมูลการจองที่ "ยืนยันแล้ว" ทั้งหมดในอนาคต (สำหรับแสดงเป็นตารางรวม)
-        $confirmedBookings = Booking::where('payment_status', 'paid')
+        $confirmedBookings = Booking::where('status', 'paid')
             ->where('booking_date', '>=', today())
             ->with('fieldType')
             ->orderBy('booking_date', 'asc')
             ->orderBy('start_time', 'asc')
-            ->limit(20) // แสดงแค่ 20 รายการล่าสุดเพื่อไม่ให้ตารางยาวเกินไป
+            ->limit(10) // แสดงแค่ 10 รายการล่าสุด
             ->get();
 
-        // 4. ส่งตัวแปรทั้งหมดไปที่ view
+        // 3. ส่งแค่ 2 ตัวแปรนี้ไปที่ view
         return view('user.dashboard', [
             'myBookings'        => $myBookings,
             'activeMembership'  => $activeMembership,

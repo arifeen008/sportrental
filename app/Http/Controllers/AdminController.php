@@ -15,11 +15,11 @@ class AdminController extends Controller
     {
         // ดึงข้อมูลสำหรับ Widgets
         $bookingsTodayCount       = Booking::whereDate('booking_date', today())->count();
-        $pendingVerificationCount = Booking::where('payment_status', 'verifying')->count();
-        $monthlyRevenue           = Booking::where('payment_status', 'paid')->whereMonth('created_at', now()->month)->sum('total_price');
+        $pendingVerificationCount = Booking::where('status', 'verifying')->count();
+        $monthlyRevenue           = Booking::where('status', 'paid')->whereMonth('created_at', now()->month)->sum('total_price');
 
         // ดึงข้อมูลการจองที่ต้องจัดการ
-        $actionRequiredBookings = Booking::where('payment_status', 'verifying')->with(['user', 'fieldType'])->latest()->get();
+        $actionRequiredBookings = Booking::where('status', 'verifying')->with(['user', 'fieldType'])->latest()->get();
 
         // เตรียมข้อมูลสำหรับ Chart.js (7 วันล่าสุด)
         $chartData = Booking::where('booking_date', '>=', now()->subDays(6)->startOfDay())
@@ -49,7 +49,7 @@ class AdminController extends Controller
     // รับ $booking ที่ถูกหาเจอโดยอัตโนมัติ
     public function approve(Request $request, Booking $booking)
     {
-        $booking->payment_status = 'paid';
+        $booking->status = 'paid';
         $booking->status         = 'confirmed';
         $booking->save();
 
@@ -61,7 +61,7 @@ class AdminController extends Controller
     {
         $request->validate(['rejection_reason' => 'required|string|max:500']);
 
-        $booking->payment_status   = 'rejected';
+        $booking->status   = 'rejected';
         $booking->status           = 'cancelled';
         $booking->rejection_reason = $request->input('rejection_reason');
         $booking->save();
@@ -105,7 +105,7 @@ class AdminController extends Controller
         $isBooked = Booking::where('id', '!=', $booking->id) // ไม่ต้องเช็คกับตัวเอง
             ->where('field_type_id', $booking->field_type_id)
             ->where('booking_date', $validated['new_booking_date'])
-            ->where('payment_status', 'paid')
+            ->where('status', 'paid')
             ->where('start_time', '<', $validated['new_end_time'])
             ->where('end_time', '>', $validated['new_start_time'])
             ->exists();

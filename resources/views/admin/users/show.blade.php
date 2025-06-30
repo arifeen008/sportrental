@@ -38,7 +38,7 @@
                                         <td>{{ thaidate('d M y', $booking->booking_date) }}</td>
                                         <td>{{ optional($booking->fieldType)->name ?? 'เหมาวัน' }}</td>
                                         <td class="text-center"><span
-                                                class="badge bg-success">{{ $booking->payment_status }}</span></td>
+                                                class="badge bg-success">{{ $booking->status }}</span></td>
                                     </tr>
                                 @empty
                                     <tr>

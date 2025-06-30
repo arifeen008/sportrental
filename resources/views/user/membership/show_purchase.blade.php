@@ -52,7 +52,7 @@
                             <h5 class="mb-3">ขั้นตอนต่อไป: ชำระเงินและแจ้งโอน</h5>
                             <div class="alert alert-secondary">
                                 <p class="mb-1">กรุณาชำระเงินจำนวน <strong class="fs-4 text-danger">{{ number_format($purchase->price, 2) }}</strong> บาท</p>
-                                <p class="small mb-0">มาที่บัญชี: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามปะกาสัย)</p>
+                                <p class="small mb-0">มาที่บัญชี: ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามษะกอฟะฮ จำกัด)</p>
                             </div>
                             <form action="{{ route('user.purchase.uploadSlip', $purchase) }}" method="POST" enctype="multipart/form-data">
                                 @csrf

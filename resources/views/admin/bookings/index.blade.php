@@ -33,16 +33,16 @@
                                 </td>
                                 <td class="text-end">{{ number_format($booking->total_price, 2) }}</td>
                                 <td class="text-center">
-                                    @if ($booking->payment_status == 'paid')
+                                    @if ($booking->status == 'paid')
                                         <span class="badge bg-success">ชำระเงินแล้ว</span>
-                                    @elseif($booking->payment_status == 'unpaid')
+                                    @elseif($booking->status == 'unpaid')
                                         <span class="badge bg-secondary">ยังไม่ชำระเงิน</span>
-                                    @elseif($booking->payment_status == 'verifying')
+                                    @elseif($booking->status == 'verifying')
                                         <span class="badge bg-warning text-dark">รอตรวจสอบ</span>
-                                    @elseif($booking->payment_status == 'rejected')
+                                    @elseif($booking->status == 'rejected')
                                         <span class="badge bg-danger">ถูกปฏิเสธ</span>
                                     @else
-                                        <span class="badge bg-dark">{{ $booking->payment_status }}</span>
+                                        <span class="badge bg-dark">{{ $booking->status }}</span>
                                     @endif
                                 </td>
                                 <td class="text-center">

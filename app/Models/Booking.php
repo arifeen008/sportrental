@@ -3,7 +3,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Field;
 
 class Booking extends Model
 {
@@ -25,6 +24,7 @@ class Booking extends Model
     protected $casts = [
         'booking_date'              => 'date',
         'price_calculation_details' => 'array',
+        'expires_at'                => 'datetime',
     ];
 
     public function user()

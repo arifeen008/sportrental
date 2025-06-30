@@ -20,7 +20,7 @@ class BookingController extends Controller
 
     public function createHourly()
     {
-        $confirmedBookings = Booking::where('payment_status', 'paid')
+        $confirmedBookings = Booking::where('status', 'paid')
             ->where('booking_date', '>=', now()->toDateString())->get();
         return view('user.booking.create_hourly', compact('confirmedBookings'));
     }
@@ -30,7 +30,7 @@ class BookingController extends Controller
  */
     public function createPackage()
     {
-        $confirmedBookings = Booking::where('payment_status', 'paid')
+        $confirmedBookings = Booking::where('status', 'paid')
             ->where('booking_date', '>=', today())
             ->with('fieldType')
             ->orderBy('booking_date', 'asc')
@@ -52,116 +52,92 @@ class BookingController extends Controller
             return redirect()->route('dashboard')->with('error', 'คุณยังไม่มีบัตรสมาชิกที่สามารถใช้งานได้');
         }
 
-        $confirmedBookings = Booking::where('payment_status', 'paid')
+        $confirmedBookings = Booking::where('status', 'paid')
             ->where('booking_date', '>=', now()->toDateString())->get();
 
         return view('user.booking.create_membership', compact('activeMembership', 'confirmedBookings'));
     }
     public function confirm(Request $request)
     {
-        // --- 1. ตรวจสอบเงื่อนไขทางธุรกิจ (วันจันทร์, จองคร่อมเวลา) ---
+        // --- 1. ตรวจสอบเงื่อนไขทางธุรกิจพื้นฐาน ---
         $bookingDate = Carbon::parse($request->input('booking_date'));
         if ($bookingDate->isMonday()) {
             return redirect()->back()->with('error', 'ขออภัย สนามปิดให้บริการทุกวันจันทร์')->withInput();
         }
-        if ($request->input('start_time') < '18:00:00' && $request->input('end_time') > '18:00:00') {
-            return redirect()->back()->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้')->withInput();
-        }
 
-        // --- 2. ตรวจสอบความว่างของสนาม (รอบสุดท้ายก่อนสร้างการจอง) ---
-        $isBooked = Booking::where('field_type_id', $request->input('field_type_id'))
-            ->where('booking_date', $request->input('booking_date'))
-            ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
-            ->where('start_time', '<', $request->input('end_time'))
-            ->where('end_time', '>', $request->input('start_time'))
-            ->exists();
+        $bookingType = $request->input('booking_type');
+
+                           // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
+        $isBooked = false; // กำหนดค่าเริ่มต้น
+        if ($bookingType === 'hourly' || $bookingType === 'membership') {
+            $validated = $request->validate([
+                'field_type_id' => 'required|exists:field_types,id',
+                'start_time'    => 'required|date_format:H:i',
+                'end_time'      => 'required|date_format:H:i|after:start_time',
+            ]);
+            if ($validated['start_time'] < '18:00:00' && $validated['end_time'] > '18:00:00') {
+                return redirect()->back()->with('error', 'ไม่สามารถจองคร่อมช่วงเวลา 18:00 น. ได้')->withInput();
+            }
+            $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
+                ->where('booking_date', $bookingDate->toDateString())
+                ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
+                ->where('start_time', '<', $validated['end_time'])
+                ->where('end_time', '>', $validated['start_time'])
+                ->exists();
+        } elseif ($bookingType === 'daily_package') {
+            $query = Booking::where('booking_date', $bookingDate->toDateString())
+                ->whereIn('status', ['paid', 'verifying', 'pending_payment']);
+            if ($request->input('package_name') !== 'เหมา 2 สนาม') {
+                $fieldType = FieldType::where('name', $request->input('package_name'))->first();
+                if ($fieldType) {
+                    $query->where('field_type_id', $fieldType->id);
+                }
+            }
+            $isBooked = $query->exists();
+        }
 
         if ($isBooked) {
-            return redirect()->back()->with('error', 'ขออภัย ช่วงเวลานี้มีผู้จองแล้ว กรุณาเลือกเวลาใหม่')->withInput();
+            return redirect()->back()->with('error', 'ขออภัย ช่วงเวลาหรือวันที่ท่านเลือกมีผู้จองแล้ว')->withInput();
         }
 
-        // --- 3. คำนวณราคาและรายละเอียด (ดึง Logic มาจากเมธอดเดิม) ---
-        $summary = [];
-        if ($request->input('booking_type') === 'hourly') {
-            $summary = $this->calculateHourlyRate($request);
-        } // ... เพิ่มสำหรับ package และ membership ตามลำดับ ...
-
-        // --- 4. ถ้าทุกอย่างถูกต้อง ให้สร้างการจองใหม่เพื่อ "กันเวลา" ---
+        // --- 3. ถ้าทุกอย่างถูกต้อง ให้คำนวณราคา/ชั่วโมง ---
+        $summary = ['booking_inputs' => $request->all()];
         try {
-            $booking = DB::transaction(function () use ($request, $summary) {
-
-                $dataToSave = [
-                    'user_id'           => Auth::id(),
-                    'booking_type'      => $request->input('booking_type'),
-                    'field_type_id'     => $request->input('field_type_id'),
-                    'booking_date'      => $request->input('booking_date'),
-                    'start_time'        => $request->input('start_time'),
-                    'end_time'          => $request->input('end_time'),
-                    'notes'             => $request->input('notes'),
-                    'duration_in_hours' => $summary['duration_in_hours'] ?? 0,
-                    'base_price'        => $summary['subtotal_price'] ?? ($summary['base_price'] ?? 0),
-                    'discount'          => $summary['discount_amount'] ?? 0,
-                    'total_price'       => $summary['total_price'],
-                    'status'            => 'pending_payment',     // <-- สถานะใหม่ "รอชำระเงิน"
-                    'expires_at'        => now()->addMinutes(15), // <-- กำหนดเวลาหมดอายุ 15 นาที
-                ];
-
-                $booking               = Booking::create($dataToSave);
-                $booking->booking_code = now()->format('ymd') . '-' . $booking->id;
-                $booking->save();
-
-                return $booking;
-            });
-
-            // 5. ส่งผู้ใช้ไปยังหน้าชำระเงินใหม่ พร้อมกับ ID ของการจอง
-            return redirect()->route('user.booking.payment', $booking);
-
+            if ($bookingType === 'hourly') {
+                $summary = array_merge($summary, $this->calculateHourlyRate($request));
+            } elseif ($bookingType === 'daily_package') {
+                $summary = array_merge($summary, $this->calculatePackageRate($request));
+            } elseif ($bookingType === 'membership') {
+                $summary = array_merge($summary, $this->calculateMembershipUsage($request));
+            }
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการสร้างการจอง: ' . $e->getMessage());
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
-    }
 
+        // --- 4. แสดงหน้ายืนยันข้อมูล ---
+        // เราจะย้าย Logic การสร้างการจองไปไว้ที่เมธอด store แทน
+        return view('user.booking.confirm', compact('summary'));
+    }
     public function store(Request $request)
     {
         try {
-            // ใช้ Transaction เพื่อให้แน่ใจว่าถ้ามีขั้นตอนไหนพลาด จะยกเลิกทั้งหมด
             $booking = DB::transaction(function () use ($request) {
-                // 1. เตรียมข้อมูลพื้นฐาน
-                $bookingType = $request->input('booking_type');
 
-                $dataToSave = [
-                    'user_id'            => Auth::id(),
-                    'booking_type'       => $bookingType,
-                    'booking_date'       => $request->input('booking_date'),
-                    'notes'              => $request->input('notes'),
-                    'base_price'         => $request->input('base_price', 0),
-                    'overtime_charges'   => $request->input('overtime_charges', 0),
-                    'discount'           => $request->input('discount', 0),
-                    'total_price'        => $request->input('total_price'),
-                    'duration_in_hours'  => $request->input('duration_in_hours', 0),
-                    'hours_deducted'     => $request->input('hours_deducted'),
-                    'user_membership_id' => $request->input('user_membership_id'),
-                    'status'             => 'confirmed', // ทุกการจองถือว่า confirmed ในเบื้องต้น
-                ];
+                $bookingType              = $request->input('booking_type');
+                $dataToSave               = $request->except(['_token', 'booking_inputs']); // ดึงข้อมูลจาก hidden input
+                $dataToSave['user_id']    = Auth::id();                                     // ใช้ Auth::id() เพื่อดึง ID ของผู้ใช้ที่ล็อกอินอยู่
+                $dataToSave['status']     = 'pending_payment';
+                $dataToSave['expires_at'] = now()->addMinutes(15);
 
-                if ($bookingType === 'membership') {
-                    // ถ้าเป็นการใช้บัตรสมาชิก ให้ถือว่า "จ่ายแล้ว" ทันที
-                    $dataToSave['payment_status'] = 'paid';
-                } else {
-                    // ถ้าเป็นประเภทอื่น ให้ตั้งเป็น "รอชำระเงิน" ตามปกติ
-                    $dataToSave['payment_status'] = 'unpaid';
-                }
-
-                if ($request->input('booking_type') === 'hourly' || $request->input('booking_type') === 'membership') {
-                    $dataToSave['field_type_id'] = $request->input('field_type_id');
-                    $dataToSave['start_time']    = $request->input('start_time');
-                    $dataToSave['end_time']      = $request->input('end_time');
-                } elseif ($request->input('booking_type') === 'daily_package') {
+                // สำหรับเหมาวัน ให้กำหนด start/end time ที่นี่
+                if ($bookingType === 'daily_package') {
                     $packageRate = PackageRate::where('package_name', $request->input('package_name'))
                         ->where('rental_type', $request->input('rental_type'))
                         ->firstOrFail();
+
                     $dataToSave['start_time'] = $packageRate->base_start_time;
                     $dataToSave['end_time']   = $request->has('wants_overtime') ? $request->input('overtime_end_time') : $packageRate->base_end_time;
+
                     if ($request->input('package_name') !== 'เหมา 2 สนาม') {
                         $fieldType                   = FieldType::where('name', $request->input('package_name'))->first();
                         $dataToSave['field_type_id'] = $fieldType->id ?? null;
@@ -171,32 +147,26 @@ class BookingController extends Controller
                     $dataToSave['price_calculation_details'] = ['rental_type' => $request->input('rental_type'), 'package_name' => $request->input('package_name')];
                 }
 
-                // 2. สร้างการจอง
-                $booking = Booking::create($dataToSave);
-
-                // 3. สร้าง Booking Code
+                $booking               = Booking::create($dataToSave);
                 $booking->booking_code = now()->format('ymd') . '-' . $booking->id;
                 $booking->save();
 
-                // 4. ถ้าเป็นการใช้บัตรสมาชิก ให้หักชั่วโมง
                 if ($booking->booking_type === 'membership') {
                     $membership = UserMembership::find($booking->user_membership_id);
                     if ($membership) {
                         $membership->remaining_hours -= $booking->hours_deducted;
-                        if ($membership->remaining_hours <= 0) {
-                            $membership->status = 'used_up';
-                        }
+                        if ($membership->remaining_hours <= 0) {$membership->status = 'used_up';}
                         $membership->save();
                     }
                 }
                 return $booking;
             });
 
-            // บรรทัดสุดท้าย: ส่งผู้ใช้ไปที่หน้า dashboard
-            return redirect()->route('user.dashboard')->with('success', 'การจองของคุณสำเร็จแล้ว! รหัสการจองคือ ' . $booking->booking_code);
+            // Redirect ไปหน้าชำระเงิน
+            return redirect()->route('user.booking.payment', $booking);
 
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการบันทึกการจอง: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'เกิดข้อผิดพลาดในการสร้างการจอง: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -228,7 +198,7 @@ class BookingController extends Controller
         // 5. อัปเดตฐานข้อมูล
         $booking->update([
             'slip_image_path' => 'public/' . $path,
-            'payment_status'  => 'verifying',
+            'status'          => 'verifying',
         ]);
 
         // 6. เรียกใช้เมธอดใหม่เพื่อส่ง LINE Notify
@@ -268,7 +238,7 @@ class BookingController extends Controller
         }
 
         // 3. ดึงข้อมูลการจองอื่นๆ ที่จำเป็น (เหมือนเดิม)
-        $confirmedBookings = Booking::where('payment_status', 'paid')
+        $confirmedBookings = Booking::where('status', 'paid')
             ->where('booking_date', '>=', now()->toDateString())
             ->with('fieldType')->orderBy('booking_date')->orderBy('start_time')->get();
 
@@ -351,48 +321,43 @@ class BookingController extends Controller
 
     private function calculatePackageRate(Request $request)
     {
-        $packageName = $request->input('package_name');
-        $rentalType  = $request->input('rental_type');
-        $bookingDate = Carbon::parse($request->input('booking_date'));
+        $packageName     = $request->input('package_name');
+        $rentalTypeInput = $request->input('rental_type'); // รับค่าเข้ามาเก็บในตัวแปรใหม่
+        $bookingDate     = Carbon::parse($request->input('booking_date'));
+
+        // --- ส่วนที่แก้ไข: ตรวจสอบและจัดการค่า rentalType ---
+        // ถ้าค่าที่รับมาเป็น Array ให้ดึงค่าแรกสุดออกมาใช้, ถ้าไม่ใช่ ก็ใช้ค่าเดิม
+        $rentalType = is_array($rentalTypeInput) ? $rentalTypeInput[0] : $rentalTypeInput;
+        // --------------------------------------------------
 
         $rate = PackageRate::where('package_name', $packageName)
-            ->where('rental_type', $rentalType)
+            ->where('rental_type', $rentalType) // <-- ตอนนี้ $rentalType จะเป็น String เสมอ
             ->first();
 
         if (! $rate) {
             abort(404, "ไม่พบเรทราคาสำหรับแพ็กเกจและประเภทงานที่เลือก");
         }
 
+        // ... โค้ดส่วนที่เหลือของฟังก์ชัน (เหมือนเดิม) ...
         $basePrice       = $rate->base_price;
         $overtimeCost    = 0;
         $overtimeDetails = 'ไม่มี';
-
-        // กำหนดเวลาเริ่มต้น-สิ้นสุดพื้นฐาน
-        $startTime = Carbon::parse($rate->base_start_time);
-        $endTime   = Carbon::parse($rate->base_end_time);
+        $startTime       = Carbon::parse($rate->base_start_time);
+        $endTime         = Carbon::parse($rate->base_end_time);
 
         if ($request->has('wants_overtime') && $request->input('wants_overtime') == '1') {
             $overtimeEndTime = Carbon::parse($request->input('overtime_end_time'));
-
             if ($overtimeEndTime->gt(Carbon::parse($rate->overtime_max_end_time))) {
                 abort(400, 'ไม่สามารถจองล่วงเวลาเกิน ' . $rate->overtime_max_end_time);
             }
-
-            $overtimeHours   = $startTime->diffInHours($overtimeEndTime) - 10; // หากเวลาพื้นฐานคือ 10 ชม. (8:00-18:00)
+            $overtimeHours   = $startTime->diffInHours($overtimeEndTime) - 10;
             $overtimeCost    = $overtimeHours * $rate->overtime_price_per_hour_per_field;
             $overtimeDetails = "{$overtimeHours} ชั่วโมง (ถึง {$overtimeEndTime->format('H:i')} น.)";
-
-            // อัปเดตเวลาสิ้นสุดเป็นเวลาล่วงเวลา
-            $endTime = $overtimeEndTime;
+            $endTime         = $overtimeEndTime;
         }
 
-        $totalPrice = $basePrice + $overtimeCost;
-
-        // ================== ส่วนที่เพิ่มเข้ามาใหม่ ==================
-        // คำนวณจำนวนชั่วโมงทั้งหมดจากเวลาเริ่มต้นและสิ้นสุดสุดท้าย
+        $totalPrice      = $basePrice + $overtimeCost;
         $durationInHours = $startTime->diffInHours($endTime);
-        // =======================================================
-
         $depositAmount   = $totalPrice * 0.5;
         $securityDeposit = 2000.00;
 
@@ -410,6 +375,8 @@ class BookingController extends Controller
             'security_deposit'  => $securityDeposit,
             'special_perks'     => null,
             'hours_to_deduct'   => null,
+            'discount_amount'   => 0,
+            'discount_reason'   => null,
         ];
     }
     private function calculateMembershipUsage(Request $request)
@@ -592,10 +559,9 @@ class BookingController extends Controller
 
         $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
             ->where('booking_date', $validated['booking_date'])
-        // --- ส่วนที่แก้ไข: เช็คสถานะทั้งหมดที่ถือว่า "ไม่ว่าง" ---
-        // pending_payment คือสถานะที่ถูก "กันเวลา" ไว้ชั่วคราว
+        // ▼▼▼ ส่วนที่แก้ไข: เช็คทุกสถานะที่ถือว่า "ไม่ว่าง" ▼▼▼
             ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
-        // ----------------------------------------------------
+        // ▲▲▲ สิ้นสุดส่วนที่แก้ไข ▲▲▲
             ->where('start_time', '<', $validated['end_time'])
             ->where('end_time', '>', $validated['start_time'])
             ->exists();
@@ -624,7 +590,7 @@ class BookingController extends Controller
         $isBooked = Booking::where('id', '!=', $booking->id)
             ->where('field_type_id', $booking->field_type_id)
             ->where('booking_date', $validated['new_booking_date'])
-            ->where('payment_status', 'paid')
+            ->where('status', 'paid')
             ->where('start_time', '<', $validated['new_end_time'])
             ->where('end_time', '>', $validated['new_start_time'])
             ->exists();
@@ -647,10 +613,24 @@ class BookingController extends Controller
 
     public function showPayment(Booking $booking)
     {
-        // ตรวจสอบสิทธิ์และสถานะ
-        if ($booking->user_id !== Auth::id() || $booking->status !== 'pending_payment') {
-            abort(404);
+        // 1. ตรวจสอบสิทธิ์: ให้แน่ใจว่าผู้ใช้ที่ Login อยู่เป็นเจ้าของการจองนี้
+        if ($booking->user_id !== Auth::id()) {
+            abort(403, 'ACCESS DENIED');
         }
+
+        // 2. ตรวจสอบสถานะ: หน้านี้จะเข้าได้ต่อเมื่อสถานะเป็น 'pending_payment' เท่านั้น
+        if ($booking->status !== 'pending_payment') {
+            return redirect()->route('user.dashboard')->with('error', 'การจองนี้ไม่อยู่ในสถานะที่ต้องชำระเงินแล้ว');
+        }
+
+        // 3. ตรวจสอบว่าหมดเวลาหรือยัง
+        if (Carbon::parse($booking->expires_at)->isPast()) {
+            // (ในระบบจริง Scheduler จะเปลี่ยนสถานะเป็น cancelled)
+            // แต่เราดักไว้ก่อนเพื่อแสดงข้อความที่ชัดเจน
+            return redirect()->route('user.dashboard')->with('error', 'การจองนี้หมดเวลาในการชำระเงินแล้ว');
+        }
+
+        // 4. ส่งข้อมูลไปยัง View ใหม่
         return view('user.booking.payment', compact('booking'));
     }
 }

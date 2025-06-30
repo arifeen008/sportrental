@@ -140,7 +140,7 @@
                     </button>
                 </div>
             </div>
-            @if ($booking->payment_status === 'rejected' && $booking->rejection_reason)
+            @if ($booking->status === 'rejected' && $booking->rejection_reason)
                 <div class="alert alert-danger mt-4">
                     <strong>เหตุผลที่ถูกปฏิเสธ:</strong><br>
                     {{ $booking->rejection_reason }}

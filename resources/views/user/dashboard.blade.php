@@ -31,10 +31,10 @@
 
         <div class="row g-4">
             <div class="col-lg-8">
-                {{-- ในไฟล์ dashboard.blade.php --}}
+        
 
                 @if ($activeMembership)
-                    {{-- ================= ดีไซน์ใหม่สำหรับผู้ใช้ที่มีบัตร ================= --}}
+
                     <div class="card shadow-sm mb-4 text-white"
                         style="background: linear-gradient(45deg, #2a2a2a, #4a4a4a);">
                         <div class="card-body p-4">
@@ -127,20 +127,20 @@
                                             </td>
                                             <td class="text-end">{{ number_format($booking->total_price, 2) }}</td>
                                             <td class="text-center">
-                                                @if ($booking->payment_status == 'paid')
+                                                @if ($booking->status == 'paid')
                                                     <span class="badge bg-success">ชำระเงินแล้ว</span>
-                                                @elseif($booking->payment_status == 'unpaid')
+                                                @elseif($booking->status == 'unpaid')
                                                     <span class="badge bg-warning text-dark">รอชำระเงิน</span>
-                                                @elseif($booking->payment_status == 'verifying')
+                                                @elseif($booking->status == 'verifying')
                                                     <span class="badge bg-info">รอตรวจสอบ</span>
-                                                @elseif($booking->payment_status == 'rejected')
+                                                @elseif($booking->status == 'rejected')
                                                     <span class="badge bg-danger">ถูกปฏิเสธ</span>
                                                 @else
-                                                    <span class="badge bg-secondary">{{ $booking->payment_status }}</span>
+                                                    <span class="badge bg-secondary">{{ $booking->status }}</span>
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @if ($booking->payment_status == 'unpaid')
+                                                @if ($booking->status == 'unpaid')
                                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                                         data-bs-target="#uploadSlipModal-{{ $booking->id }}">
                                                         <i class="fas fa-upload me-1"></i> แจ้งชำระเงิน
@@ -194,8 +194,7 @@
                                         <div class="d-flex w-100">
                                             <div class="text-center me-3" style="width: 65px;">
                                                 <div class="bg-light rounded p-1 border">
-                                                    <span
-                                                        class="d-block small text-danger fw-bold">{{ thaidate('M', $booking->booking_date) }}</span>
+                                                    <span class="d-block small text-danger fw-bold">{{ thaidate('M', $booking->booking_date) }}</span>
                                                     <span class="d-block h4 mb-0">{{ $booking->booking_date->day }}</span>
                                                     <span
                                                         class="d-block small text-muted">{{ thaidate('D', $booking->booking_date) }}</span>
@@ -229,7 +228,7 @@
     </div>
 
 
-    @foreach ($myBookings->where('payment_status', 'unpaid') as $booking)
+    @foreach ($myBookings->where('status', 'unpaid') as $booking)
         <div class="modal fade" id="uploadSlipModal-{{ $booking->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
