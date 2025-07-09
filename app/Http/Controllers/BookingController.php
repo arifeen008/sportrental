@@ -67,7 +67,7 @@ class BookingController extends Controller
 
         $bookingType = $request->input('booking_type');
 
-        // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
+                           // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
         $isBooked = false; // กำหนดค่าเริ่มต้น
         if ($bookingType === 'hourly' || $bookingType === 'membership') {
             $validated = $request->validate(['field_type_id' => 'required', 'start_time' => 'required', 'end_time' => 'required']);
@@ -224,8 +224,8 @@ class BookingController extends Controller
         ]);
 
         // 4. สร้างชื่อและจัดเก็บไฟล์
-        $file      = $request->file('slip_image');
-        $extension = $file->getClientOriginalExtension();
+        $file        = $request->file('slip_image');
+        $extension   = $file->getClientOriginalExtension();
         $newFilename = $booking->booking_code . '.' . $extension;
         $path        = $file->storeAs('slips', $newFilename, 'public');
 
@@ -355,24 +355,18 @@ class BookingController extends Controller
 
     private function calculatePackageRate(Request $request)
     {
-        $packageName     = $request->input('package_name');
-        $rentalTypeInput = $request->input('rental_type'); // รับค่าเข้ามาเก็บในตัวแปรใหม่
-        $bookingDate     = Carbon::parse($request->input('booking_date'));
-
-        // --- ส่วนที่แก้ไข: ตรวจสอบและจัดการค่า rentalType ---
-        // ถ้าค่าที่รับมาเป็น Array ให้ดึงค่าแรกสุดออกมาใช้, ถ้าไม่ใช่ ก็ใช้ค่าเดิม
-        $rentalType = is_array($rentalTypeInput) ? $rentalTypeInput[0] : $rentalTypeInput;
-        // --------------------------------------------------
+        $packageName = $request->input('package_name');
+        $rentalType  = $request->input('rental_type');
+        $bookingDate = Carbon::parse($request->input('booking_date'));
 
         $rate = PackageRate::where('package_name', $packageName)
-            ->where('rental_type', $rentalType) // <-- ตอนนี้ $rentalType จะเป็น String เสมอ
+            ->where('rental_type', $rentalType)
             ->first();
 
         if (! $rate) {
             abort(404, "ไม่พบเรทราคาสำหรับแพ็กเกจและประเภทงานที่เลือก");
         }
 
-        // ... โค้ดส่วนที่เหลือของฟังก์ชัน (เหมือนเดิม) ...
         $basePrice       = $rate->base_price;
         $overtimeCost    = 0;
         $overtimeDetails = 'ไม่มี';
@@ -392,9 +386,12 @@ class BookingController extends Controller
 
         $totalPrice      = $basePrice + $overtimeCost;
         $durationInHours = $startTime->diffInHours($endTime);
-        $depositAmount   = $totalPrice * 0.5;
-        $securityDeposit = 2000.00;
 
+        // --- ส่วนที่แก้ไข: ลบการคำนวณมัดจำและเงินประกันทิ้งไป ---
+        // $depositAmount   = $totalPrice * 0.5;
+        // $securityDeposit = 2000.00;
+
+        // และลบออกจาก return array ด้วย
         return [
             'title'             => "สรุปการจองแบบเหมาวัน ({$rentalType})",
             'package_name'      => $packageName,
@@ -405,8 +402,6 @@ class BookingController extends Controller
             'overtime_details'  => $overtimeDetails,
             'total_price'       => $totalPrice,
             'duration_in_hours' => $durationInHours,
-            'deposit_amount'    => $depositAmount,
-            'security_deposit'  => $securityDeposit,
             'special_perks'     => null,
             'hours_to_deduct'   => null,
             'discount_amount'   => 0,

@@ -118,23 +118,7 @@
 
                         </div>
 
-                        {{-- ส่วนแสดงเงื่อนไขการมัดจำ --}}
-                        @if ($summary['booking_inputs']['booking_type'] === 'daily_package' && isset($summary['deposit_amount']))
-                            <div class="alert alert-warning mt-4">
-                                <h5 class="alert-heading">เงื่อนไขการชำระเงิน</h5>
-                                <p class="mb-2">กรุณาชำระเงินมัดจำ 50% เพื่อยืนยันการจองของท่าน</p>
-                                <ul class="list-unstyled mb-0">
-                                    <li>- ยอดมัดจำที่ต้องชำระวันนี้: <strong
-                                            class="fs-5">{{ number_format($summary['deposit_amount'], 2) }} บาท</strong>
-                                    </li>
-                                    <li>- เงินประกันสนาม: <strong>{{ number_format($summary['security_deposit'], 2) }}
-                                            บาท</strong> (ชำระพร้อมยอดคงเหลือ)</li>
-                                </ul>
-                                <hr>
-                                <p class="mb-0"><small>หมายเหตุ: ยอดคงเหลือและเงินประกันสนาม ต้องชำระล่วงหน้า 5
-                                        วันก่อนวันใช้งาน</small></p>
-                            </div>
-                        @endif
+                    
 
                         <form action="{{ route('user.booking.store') }}" method="POST" class="mt-4">
                             @csrf
@@ -151,8 +135,7 @@
                                 @endif
                             @endforeach
 
-                            <input type="hidden" name="base_price"
-                                value="{{ $summary['subtotal_price'] ?? ($summary['base_price'] ?? 0) }}">
+                            <input type="hidden" name="base_price" value="{{ $summary['subtotal_price'] ?? ($summary['base_price'] ?? 0) }}">
                             <input type="hidden" name="overtime_charges" value="{{ $summary['overtime_cost'] ?? 0 }}">
                             <input type="hidden" name="discount" value="{{ $summary['discount_amount'] ?? 0 }}">
                             <input type="hidden" name="total_price" value="{{ $summary['total_price'] }}">
