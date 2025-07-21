@@ -117,9 +117,7 @@
                             @endif
 
                         </div>
-
-                    
-
+                        <hr>
                         <form action="{{ route('user.booking.store') }}" method="POST" class="mt-4">
                             @csrf
 
