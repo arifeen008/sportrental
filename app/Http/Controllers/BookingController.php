@@ -20,7 +20,7 @@ class BookingController extends Controller
 
     public function createHourly()
     {
-        $confirmedBookings = Booking::where('status', 'paid')
+        $confirmedBookings = Booking::where('status', 'confirmed')
             ->where('booking_date', '>=', now()->toDateString())->get();
         return view('user.booking.create_hourly', compact('confirmedBookings'));
     }
@@ -30,7 +30,7 @@ class BookingController extends Controller
  */
     public function createPackage()
     {
-        $confirmedBookings = Booking::where('status', 'paid')
+        $confirmedBookings = Booking::where('status', 'confirmed')
             ->where('booking_date', '>=', today())
             ->with('fieldType')
             ->orderBy('booking_date', 'asc')
@@ -52,7 +52,7 @@ class BookingController extends Controller
             return redirect()->route('dashboard')->with('error', 'คุณยังไม่มีบัตรสมาชิกที่สามารถใช้งานได้');
         }
 
-        $confirmedBookings = Booking::where('status', 'paid')
+        $confirmedBookings = Booking::where('status', 'confirmed')
             ->where('booking_date', '>=', now()->toDateString())->get();
 
         return view('user.booking.create_membership', compact('activeMembership', 'confirmedBookings'));
@@ -67,7 +67,7 @@ class BookingController extends Controller
 
         $bookingType = $request->input('booking_type');
 
-                           // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
+        // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
         $isBooked = false; // กำหนดค่าเริ่มต้น
         if ($bookingType === 'hourly' || $bookingType === 'membership') {
             $validated = $request->validate(['field_type_id' => 'required', 'start_time' => 'required', 'end_time' => 'required']);
@@ -595,7 +595,7 @@ class BookingController extends Controller
 
         $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
             ->where('booking_date', $validated['booking_date'])
-            ->whereIn('status', ['paid', 'verifying', 'pending_payment'])
+            ->whereIn('status', ['paid', 'verifying', 'pending_payment','confirmed'])
             ->where('start_time', '<', $validated['end_time'])
             ->where('end_time', '>', $validated['start_time'])
             ->exists();

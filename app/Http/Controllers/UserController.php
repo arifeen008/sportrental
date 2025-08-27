@@ -31,7 +31,7 @@ class UserController extends Controller
             ->with('membershipTier')
             ->first();
 
-        $confirmedBookings = Booking::where('status', 'paid')
+        $confirmedBookings = Booking::where('status', 'confirmed')
             ->where('booking_date', '>=', today())
             ->with('fieldType')
             ->orderBy('booking_date', 'asc')
