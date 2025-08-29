@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\FieldType;
 use App\Models\HourlyRate;
-use App\Models\MembershipTier;
 use App\Models\PackageRate;
 use App\Models\UserMembership;
 use Carbon\Carbon;
@@ -17,17 +16,12 @@ use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
-
     public function createHourly()
     {
-        $confirmedBookings = Booking::where('status', 'confirmed')
-            ->where('booking_date', '>=', now()->toDateString())->get();
+        $confirmedBookings = Booking::where('status', 'confirmed')->where('booking_date', '>=', now()->toDateString())->get();
         return view('user.booking.create_hourly', compact('confirmedBookings'));
     }
 
-/**
- * แสดงฟอร์มสำหรับ "การจองเหมาวัน"
- */
     public function createPackage()
     {
         $confirmedBookings = Booking::where('status', 'confirmed')
@@ -39,9 +33,6 @@ class BookingController extends Controller
         return view('user.booking.create_package', compact('confirmedBookings'));
     }
 
-/**
- * แสดงฟอร์มสำหรับ "การจองด้วยบัตรสมาชิก"
- */
     public function createMembership()
     {
         $activeMembership = UserMembership::where('user_id', Auth::id())
@@ -67,7 +58,7 @@ class BookingController extends Controller
 
         $bookingType = $request->input('booking_type');
 
-        // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
+                           // --- 2. ตรวจสอบความว่างของสนาม (Availability Check) ---
         $isBooked = false; // กำหนดค่าเริ่มต้น
         if ($bookingType === 'hourly' || $bookingType === 'membership') {
             $validated = $request->validate(['field_type_id' => 'required', 'start_time' => 'required', 'end_time' => 'required']);
@@ -107,7 +98,6 @@ class BookingController extends Controller
         }
 
         // --- 4. แสดงหน้ายืนยันข้อมูล ---
-        // เราจะย้าย Logic การสร้างการจองไปไว้ที่เมธอด store แทน
         return view('user.booking.confirm', compact('summary'));
     }
     public function store(Request $request)
@@ -138,12 +128,14 @@ class BookingController extends Controller
                     'base_price'         => $request->input('base_price', 0),
                     'overtime_charges'   => $request->input('overtime_charges', 0),
                     'discount'           => $request->input('discount', 0),
-                    'total_price'        => $request->input('total_price'),
+                    'total_price'        => $request->input('total_price'), // ราคารวมทั้งหมด
                     'duration_in_hours'  => $request->input('duration_in_hours', 0),
                     'hours_deducted'     => $request->input('hours_deducted'),
                     'user_membership_id' => $request->input('user_membership_id'),
                     'status'             => 'pending_payment',
                     'expires_at'         => now()->addMinutes(15),
+                                               // เพิ่มการจัดการค่ามัดจำ
+                    'deposit_amount'     => 0, // ค่าเริ่มต้น
                 ];
 
                 // 6. เพิ่มข้อมูลเฉพาะตามประเภทการจอง
@@ -151,6 +143,12 @@ class BookingController extends Controller
                     $dataToSave['field_type_id'] = $request->input('field_type_id');
                     $dataToSave['start_time']    = $request->input('start_time');
                     $dataToSave['end_time']      = $request->input('end_time');
+
+                    if ($bookingType === 'hourly') {
+                        // สำหรับรายชั่วโมง ยอดมัดจำคือยอดเต็ม
+                        $dataToSave['deposit_amount'] = $request->input('total_price');
+                    }
+
                 } elseif ($bookingType === 'daily_package') {
                     $packageRate = PackageRate::where('package_name', $request->input('package_name'))
                         ->where('rental_type', $request->input('rental_type'))
@@ -158,6 +156,9 @@ class BookingController extends Controller
 
                     $dataToSave['start_time'] = $packageRate->base_start_time;
                     $dataToSave['end_time']   = $request->has('wants_overtime') ? $request->input('overtime_end_time') : $packageRate->base_end_time;
+
+                    // สำหรับเหมาวัน ยอดมัดจำคือ 50% ของราคารวมทั้งหมด
+                    $dataToSave['deposit_amount'] = $request->input('deposit_amount');
 
                     if ($request->input('package_name') !== 'เหมา 2 สนาม') {
                         $fieldType                   = FieldType::where('name', $request->input('package_name'))->first();
@@ -171,7 +172,7 @@ class BookingController extends Controller
                 if ($bookingType === 'membership') {
                     // ถ้าใช้บัตรสมาชิก ให้สถานะเป็น 'paid' (จ่ายแล้ว) และ 'confirmed' ทันที
                     $dataToSave['status']     = 'paid';
-                    $dataToSave['expires_at'] = null; // ไม่มีการหมดเวลา
+                    $dataToSave['expires_at'] = null;
                 } else {
                     // ประเภทอื่น ให้เป็น 'pending_payment' เพื่อเข้าสู่กระบวนการชำระเงิน
                     $dataToSave['status']     = 'pending_payment';
@@ -333,8 +334,6 @@ class BookingController extends Controller
         // 3. คำนวณราคาสุทธิ
         $finalPrice = $totalPrice - $discountAmount;
 
-        // =================== END: ส่วนที่เพิ่มเข้ามาใหม่ ===================
-
         // 4. ส่งข้อมูลสรุปกลับไป (เพิ่ม Key ใหม่เข้าไป)
         return [
             'title'                   => 'สรุปการจองรายชั่วโมง',
@@ -342,10 +341,10 @@ class BookingController extends Controller
             'booking_date'            => $bookingDate,
             'time_range'              => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
             'duration_in_hours'       => $durationInHours,
-            'subtotal_price'          => $totalPrice,     // <-- เพิ่มใหม่: ราคาเต็มก่อนลด
-            'discount_amount'         => $discountAmount, // <-- เพิ่มใหม่: ยอดส่วนลด
-            'discount_reason'         => $discountReason, // <-- เพิ่มใหม่: เหตุผลของส่วนลด
-            'total_price'             => $finalPrice,     // <-- อัปเดต: เป็นราคาสุทธิหลังลด
+            'subtotal_price'          => $totalPrice,
+            'discount_amount'         => $discountAmount,
+            'discount_reason'         => $discountReason,
+            'total_price'             => $finalPrice,
             'special_perks'           => null,
             'price_breakdown_details' => $priceBreakdown,
             'hours_to_deduct'         => null,
@@ -387,9 +386,7 @@ class BookingController extends Controller
         $totalPrice      = $basePrice + $overtimeCost;
         $durationInHours = $startTime->diffInHours($endTime);
 
-        // --- ส่วนที่แก้ไข: ลบการคำนวณมัดจำและเงินประกันทิ้งไป ---
-        // $depositAmount   = $totalPrice * 0.5;
-        // $securityDeposit = 2000.00;
+        $depositAmount = $totalPrice * 0.5;
 
         // และลบออกจาก return array ด้วย
         return [
@@ -401,6 +398,7 @@ class BookingController extends Controller
             'overtime_cost'     => $overtimeCost,
             'overtime_details'  => $overtimeDetails,
             'total_price'       => $totalPrice,
+            'deposit_amount'    => $depositAmount,
             'duration_in_hours' => $durationInHours,
             'special_perks'     => null,
             'hours_to_deduct'   => null,
@@ -461,54 +459,6 @@ class BookingController extends Controller
         return $days[$date->dayOfWeek];
     }
 
-    // private function pushMessageToGroup(Booking $booking)
-    // {
-
-    //     // ข้อมูลสำหรับการส่งข้อความไปยัง LINE Group
-
-    //     $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU='; // Channel Access Token
-    //     $groupId     = 'C8828a7ce6dd1f2f1d9ad3638489c6e9d';
-
-    //     $message =      "\n📸 มีการแจ้งชำระเงินใหม่!\n" .
-    //                     "--------------------\n" .
-    //                     "รหัสจอง: " . $booking->booking_code . "\n" .
-    //                     "ผู้จอง: " . $booking->user->name . "\n" .
-    //                     "ยอดเงิน: " . number_format($booking->total_price, 2) . " บาท\n" .
-    //                         "--------------------\n" .
-    //                     "กรุณาตรวจสอบสลิปในหน้า Admin Dashboard";
-    //     // เตรียม payload
-    //     $body = [
-    //         'to'       => $groupId,
-    //         'messages' => [
-    //             [
-    //                 'type' => 'text',
-    //                 'text' => $message,
-    //             ],
-    //             [
-    //                 'type' => 'image',
-    //                 'originalContentUrl' => url('storage/' . $booking->slip_image_path),
-    //                 'previewImageUrl'    => url('storage/' . $booking->slip_image_path),
-    //             ]
-    //         ],
-    //     ];
-
-    //     // เรียก API
-    //     $response = Http::withHeaders([
-    //         'Content-Type'  => 'application/json',
-    //         'Authorization' => 'Bearer ' . $accessToken,
-    //     ])->post('https://api.line.me/v2/bot/message/push', $body);
-
-    //     // ตรวจสอบผลลัพธ์
-    //     if ($response->successful()) {
-    //         return response()->json(['status' => 'success', 'message' => 'ส่งข้อความสำเร็จ']);
-    //     } else {
-    //         return response()->json([
-    //             'status'   => 'error',
-    //             'response' => $response->body(),
-    //         ], 500);
-    //     }
-    // }
-
     private function pushMessageToGroupFromBooking(Booking $booking)
     {
         $accessToken = 'UUuw3veqOqlr4y5kjaXM27jrs/qQHkqhtX2vFUmDwAXOzk1ixPyRjSsRH/6y/tBk8Z0rPSdCm061R/KNq0PORlLxqNaYhOb7u5AMpzszzIGET7G/3spPDBxIiMYlM/fdAzUksR9yZcWIhak5RVG3PQdB04t89/1O/w1cDnyilFU=';
@@ -534,24 +484,29 @@ class BookingController extends Controller
 // 2. เตรียมข้อมูล "สนาม/แพ็กเกจ"
         $itemDetails = '';
         if ($booking->booking_type === 'daily_package') {
-            // ถ้าเป็นเหมาวัน ให้แสดงชื่อแพ็กเกจ
             $itemDetails = $booking->price_calculation_details['package_name'] ?? 'เหมาวัน';
         } else {
             // ถ้าเป็นประเภทอื่น ให้แสดงชื่อสนาม
             $itemDetails = optional($booking->fieldType)->name ?? 'ไม่ระบุ';
         }
 
-// 3. สร้างข้อความสุดท้ายโดยใช้ตัวแปรที่เตรียมไว้
+// ตรวจสอบประเภทการจองเพื่อกำหนด "ยอดที่ต้องชำระ" ที่ถูกต้อง
+        $paymentAmount = number_format($booking->total_price, 2);
+        if ($booking->booking_type === 'daily_package') {
+            $paymentAmount = number_format($booking->deposit_amount, 2);
+        }
+
         $textMessage = "📌 แจ้งเตือนการจองใหม่\n" .
         "--------------------\n" .
-        "รหัสการจอง: {$booking->booking_code}\n" .
-        "ชื่อผู้จอง: {$booking->user->name}\n" .
-        "ประเภทการจอง: {$bookingTypeDescription}\n" .
-        "สนาม/แพ็กเกจ: {$itemDetails}\n" .
-        "วันที่: " . thaidate('j F Y', (string) $booking->booking_date) . "\n" .
-        "เวลา: " . Carbon::parse($booking->start_time)->format('H:i') . " - " . Carbon::parse($booking->end_time)->format('H:i') . " น.\n" .
-        "รวมเวลา: {$booking->duration_in_hours} ชั่วโมง\n" .
-        "ยอดชำระ: " . number_format($booking->total_price, 2) . " บาท";
+        "รหัสการจอง : {$booking->booking_code}\n" .
+        "ชื่อผู้จอง : {$booking->user->name}\n" .
+        "ประเภทการจอง : {$bookingTypeDescription}\n" .
+        "สนาม/แพ็กเกจ : {$itemDetails}\n" .
+        "วันที่ :  " . thaidate('j F Y', (string) $booking->booking_date) . "\n" .
+        "เวลา : " . Carbon::parse($booking->start_time)->format('H:i') . " - " . Carbon::parse($booking->end_time)->format('H:i') . " น.\n" .
+        "รวมเวลา : {$booking->duration_in_hours} ชั่วโมง\n" .
+        "ยอดชำระ : {$paymentAmount} บาท\n" .
+        "เบอร์โทร :  {$booking->user->phone_number}\n ";
 
         $body = [
             'to'       => $groupId,
@@ -595,7 +550,7 @@ class BookingController extends Controller
 
         $isBooked = Booking::where('field_type_id', $validated['field_type_id'])
             ->where('booking_date', $validated['booking_date'])
-            ->whereIn('status', ['paid', 'verifying', 'pending_payment','confirmed'])
+            ->whereIn('status', ['paid', 'verifying', 'pending_payment', 'confirmed'])
             ->where('start_time', '<', $validated['end_time'])
             ->where('end_time', '>', $validated['start_time'])
             ->exists();

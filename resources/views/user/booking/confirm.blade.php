@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('styles')
+@push('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <style>
         .summary-list .list-group-item {
@@ -24,7 +24,7 @@
             color: var(--bs-danger);
         }
     </style>
-@endsection
+@endpush
 
 @section('content')
     <div class="container my-5">
@@ -74,9 +74,8 @@
 
                         <h5 class="mt-4">สรุปค่าใช้จ่าย / การใช้สิทธิ์</h5>
                         <div class="list-group list-group-flush summary-list">
-
-                            {{-- สำหรับบัตรสมาชิก --}}
                             @if ($summary['booking_inputs']['booking_type'] === 'membership')
+                                {{-- สำหรับบัตรสมาชิก --}}
                                 <div class="list-group-item d-flex justify-content-between align-items-center">
                                     <span>ชั่วโมงที่จะถูกหัก</span>
                                     <span class="fs-5 fw-bold text-primary">{{ $summary['hours_to_deduct'] }} ชั่วโมง</span>
@@ -108,50 +107,60 @@
                                     <span>-{{ number_format($summary['discount_amount'] ?? 0, 2) }} บาท</span>
                                 </div>
 
-                                {{-- ยอดรวมสุดท้าย --}}
-                                <div
-                                    class="list-group-item d-flex justify-content-between align-items-center summary-total">
-                                    <span class="fw-bold">ยอดชำระสุทธิ</span>
+                                {{-- ยอดรวมทั้งหมด --}}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">ยอดรวมทั้งหมด</span>
                                     <span class="total-price">{{ number_format($summary['total_price'], 2) }} บาท</span>
                                 </div>
-                            @endif
 
-                        </div>
-                        <hr>
-                        <form action="{{ route('user.booking.store') }}" method="POST" class="mt-4">
-                            @csrf
-
-                            {{-- Hidden Inputs ทั้งหมดที่ใช้ส่งข้อมูล --}}
-                            @foreach ($summary['booking_inputs'] as $key => $value)
-                                @if (is_array($value))
-                                    @foreach ($value as $sub_key => $sub_value)
-                                        <input type="hidden" name="{{ $key }}[{{ $sub_key }}]"
-                                            value="{{ $sub_value }}">
-                                    @endforeach
+                                {{-- ตรวจสอบว่ามีค่ามัดจำหรือไม่ก่อนแสดงผล --}}
+                                @if (isset($summary['deposit_amount']))
+                                    <div
+                                        class="list-group-item d-flex justify-content-between align-items-center summary-deposit bg-light">
+                                        <span class="fw-bold text-info">ยอดมัดจำที่ต้องชำระ (50%)</span>
+                                        <span class="fs-4 fw-bold text-info">{{ number_format($summary['deposit_amount'], 2) }}
+                                            บาท</span>
+                                    </div>
                                 @else
-                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center summary-total">
+                                        <span class="fw-bold">ยอดชำระสุทธิ</span>
+                                        <span class="total-price">{{ number_format($summary['total_price'], 2) }} บาท</span>
+                                    </div>
                                 @endif
-                            @endforeach
-
-                            <input type="hidden" name="base_price" value="{{ $summary['subtotal_price'] ?? ($summary['base_price'] ?? 0) }}">
-                            <input type="hidden" name="overtime_charges" value="{{ $summary['overtime_cost'] ?? 0 }}">
-                            <input type="hidden" name="discount" value="{{ $summary['discount_amount'] ?? 0 }}">
-                            <input type="hidden" name="total_price" value="{{ $summary['total_price'] }}">
-                            <input type="hidden" name="duration_in_hours"
-                                value="{{ $summary['duration_in_hours'] ?? 0 }}">
-                            <input type="hidden" name="hours_deducted" value="{{ $summary['hours_to_deduct'] ?? null }}">
-                            <input type="hidden" name="user_membership_id"
-                                value="{{ $summary['user_membership_id'] ?? null }}">
-
-                            {{-- ปุ่มยืนยันและปุ่มกลับ --}}
-                            <div class="d-flex justify-content-between">
-                                <a href="{{ url()->previous() }}" class="btn btn-secondary">&laquo; กลับไปแก้ไข</a>
-                                <button type="submit" class="btn btn-success">ยืนยันการจอง</button>
-                            </div>
-                        </form>
+                            @endif
+                        </div>
                     </div>
+                    <hr>
+                    <form action="{{ route('user.booking.store') }}" method="POST" class="mt-4">
+                        @csrf
+                        @foreach ($summary['booking_inputs'] as $key => $value)
+                            @if (is_array($value))
+                                @foreach ($value as $sub_key => $sub_value)
+                                    <input type="hidden" name="{{ $key }}[{{ $sub_key }}]" value="{{ $sub_value }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+
+                        <input type="hidden" name="base_price" value="{{ $summary['subtotal_price'] ?? ($summary['base_price'] ?? 0) }}">
+                        <input type="hidden" name="overtime_charges" value="{{ $summary['overtime_cost'] ?? 0 }}">
+                        <input type="hidden" name="discount" value="{{ $summary['discount_amount'] ?? 0 }}">
+                        <input type="hidden" name="total_price" value="{{ $summary['total_price'] }}">
+                        <input type="hidden" name="duration_in_hours" value="{{ $summary['duration_in_hours'] ?? 0 }}">
+                        <input type="hidden" name="hours_deducted" value="{{ $summary['hours_to_deduct'] ?? null }}">
+                        <input type="hidden" name="user_membership_id" value="{{ $summary['user_membership_id'] ?? null }}">
+                        <input type="hidden" name="deposit_amount" value="{{ $summary['deposit_amount'] ?? null }}">
+
+                        {{-- ปุ่มยืนยันและปุ่มกลับ --}}
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url()->previous() }}" class="btn btn-secondary">&laquo; กลับไปแก้ไข</a>
+                            <button type="submit" class="btn btn-success">ยืนยันการจอง</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
+    </div>
     </div>
 @endsection

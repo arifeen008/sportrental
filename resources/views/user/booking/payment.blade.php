@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('styles')
+@push('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-@endsection
+@endpush
 
 @section('content')
     <div class="container my-5">
@@ -36,10 +36,26 @@
                                 <strong>{{ \Carbon\Carbon::parse($booking->start_time)->format('H:i') }} -
                                     {{ \Carbon\Carbon::parse($booking->end_time)->format('H:i') }}</strong>
                             </li>
-                            <li class="list-group-item d-flex justify-content-between bg-light">
-                                <span class="fw-bold">ยอดที่ต้องชำระ:</span>
-                                <strong class="fs-5 text-danger">{{ number_format($booking->total_price, 2) }} บาท</strong>
-                            </li>
+
+                            {{-- ตรวจสอบประเภทการจองเพื่อแสดงยอดที่ต้องชำระให้ถูกต้อง --}}
+                            @if ($booking->booking_type === 'daily_package')
+                                {{-- ถ้าเป็นการจองแบบเหมาวัน ให้แสดงยอดมัดจำ --}}
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">ยอดรวมทั้งหมด:</span>
+                                    <strong class="text-secondary">{{ number_format($booking->total_price, 2) }} บาท</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between bg-light">
+                                    <span class="fw-bold text-danger">ยอดมัดจำที่ต้องชำระ:</span>
+                                    <strong class="fs-5 text-danger">{{ number_format($booking->deposit_amount, 2) }} บาท</strong>
+                                </li>
+                            @else
+                                {{-- ถ้าเป็นการจองแบบอื่น (รายชั่วโมง) ให้แสดงยอดรวมทั้งหมด --}}
+                                <li class="list-group-item d-flex justify-content-between bg-light">
+                                    <span class="fw-bold">ยอดที่ต้องชำระ:</span>
+                                    <strong class="fs-5 text-danger">{{ number_format($booking->total_price, 2) }} บาท</strong>
+                                </li>
+                            @endif
+
                         </ul>
 
                         <hr class="my-4">
@@ -51,8 +67,7 @@
                                 <strong>ช่องทางการโอนเงิน:</strong><br>
                                 ธ.กสิกรไทย 255-1-03447-2 (สหกรณ์อิสลามษะกอฟะฮ จำกัด)
                             </div>
-                            <form action="{{ route('user.booking.uploadSlip', $booking) }}" method="POST"
-                                enctype="multipart/form-data">
+                            <form action="{{ route('user.booking.uploadSlip', $booking) }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="slip_image" class="form-label">อัปโหลดสลิปการโอนเงิน</label>
@@ -73,7 +88,7 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const timerElement = document.getElementById('timer');
             const countdownWrapper = document.getElementById('countdown-timer');
             const uploadSection = document.getElementById('upload-section');
@@ -81,7 +96,7 @@
             // แปลงเวลาหมดอายุจาก PHP มาให้ JavaScript ใช้งาน
             const expiryTime = new Date('{{ $booking->expires_at->toIso8601String() }}').getTime();
 
-            const countdownInterval = setInterval(function() {
+            const countdownInterval = setInterval(function () {
                 const now = new Date().getTime();
                 const distance = expiryTime - now;
 

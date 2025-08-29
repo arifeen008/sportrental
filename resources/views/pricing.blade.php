@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('styles')
+@push('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <style>
         .pricing-header {
@@ -15,7 +15,7 @@
             transform: scale(1.02);
         }
     </style>
-@endsection
+@endpush
 
 @section('content')
     <div class="container py-5">

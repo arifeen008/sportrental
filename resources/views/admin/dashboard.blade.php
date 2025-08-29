@@ -56,11 +56,14 @@
 
                     @forelse($actionRequiredBookings as $booking)
                         <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center p-3">
-
                             {{-- ส่วนแสดงรายละเอียดที่แก้ไขใหม่ --}}
                             <div>
                                 <strong class="d-block">{{ $booking->user->name }} - (จอง
                                     #{{ $booking->booking_code }})</strong>
+                                {{-- เพิ่มข้อมูลผู้จองและเบอร์โทร --}}
+                                <span class="d-block text-muted small mt-1">
+                                    <i class="fas fa-phone fa-fw"></i> {{ $booking->user->phone_number ?? 'ไม่ระบุ' }}
+                                </span>
                                 <div class="text-muted small mt-1">
                                     <span class="me-3">
                                         <i class="fas fa-calendar-alt fa-fw"></i>
@@ -80,11 +83,26 @@
                                             {{ optional($booking->fieldType)->name ?? 'ไม่ระบุ' }}
                                         @endif
                                     </span>
-                                    <span class="me-3">
-                                        <i class="fas fa-money-bill-wave fa-fw"></i>
-                                        ราคา: <strong
-                                            class="text-dark">{{ number_format($booking->total_price, 2) }}</strong> บาท
-                                    </span>
+                                    {{-- ส่วนแสดงราคาที่แก้ไขใหม่ --}}
+                                    @if ($booking->booking_type === 'daily_package')
+                                        <span class="me-3">
+                                            <i class="fas fa-money-bill-wave fa-fw"></i>
+                                            <span class="text-dark">ยอดรวม:</span>
+                                            <strong class="text-secondary">{{ number_format($booking->total_price, 2) }}</strong>
+                                            บาท
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="fas fa-hand-holding-usd fa-fw"></i>
+                                            <span class="text-dark">ยอดมัดจำ:</span>
+                                            <strong class="text-info">{{ number_format($booking->deposit_amount, 2) }}</strong> บาท
+                                        </span>
+                                    @else
+                                        <span class="me-3">
+                                            <i class="fas fa-money-bill-wave fa-fw"></i>
+                                            <span class="text-dark">ยอดชำระ:</span>
+                                            <strong class="text-dark">{{ number_format($booking->total_price, 2) }}</strong> บาท
+                                        </span>
+                                    @endif
                                 </div>
                             </div>
 
@@ -94,8 +112,7 @@
                                     data-bs-target="#viewSlipModal-{{ $booking->id }}" title="ดูสลิป">
                                     <i class="fas fa-receipt"></i> ดูสลิป
                                 </button>
-                                <form action="{{ route('admin.booking.approve', $booking) }}" method="POST"
-                                    class="d-inline"
+                                <form action="{{ route('admin.booking.approve', $booking) }}" method="POST" class="d-inline"
                                     onsubmit="return confirm('ยืนยันการอนุมัติการจอง #{{ $booking->booking_code }}?');">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success" title="อนุมัติ">
@@ -134,7 +151,8 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="slipModalLabel-{{ $booking->id }}">สลิปการโอนเงิน: การจอง
-                            {{ $booking->booking_code }}</h5>
+                            {{ $booking->booking_code }}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body text-center">
@@ -160,16 +178,16 @@
                         @csrf
                         <div class="modal-header">
                             <h5 class="modal-title" id="rejectModalLabel-{{ $booking->id }}">ปฏิเสธการจอง
-                                {{ $booking->booking_code }}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                                {{ $booking->booking_code }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label for="rejection_reason-{{ $booking->id }}"
                                     class="form-label">กรุณาระบุเหตุผลที่ปฏิเสธ:</label>
-                                <textarea class="form-control" name="rejection_reason" id="rejection_reason-{{ $booking->id }}" rows="3"
-                                    required placeholder="เช่น สลิปไม่ถูกต้อง, ยอดเงินไม่ตรง"></textarea>
+                                <textarea class="form-control" name="rejection_reason" id="rejection_reason-{{ $booking->id }}"
+                                    rows="3" required placeholder="เช่น สลิปไม่ถูกต้อง, ยอดเงินไม่ตรง"></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -187,7 +205,7 @@
     {{-- Chart.js CDN --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const ctx = document.getElementById('bookingChart').getContext('2d');
             const bookingChart = new Chart(ctx, {
                 type: 'bar', // เปลี่ยนเป็น Bar Chart อาจจะดูง่ายกว่า

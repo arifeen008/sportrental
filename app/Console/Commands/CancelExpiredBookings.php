@@ -3,41 +3,61 @@ namespace App\Console\Commands;
 
 use App\Models\Booking;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class CancelExpiredBookings extends Command
 {
     /**
-     * ชื่อและลายเซ็นของ command
+     * The name and signature of the console command.
+     *
+     * @var string
      */
     protected $signature = 'bookings:cancel-expired';
 
     /**
-     * คำอธิบายของ command
+     * The console command description.
+     *
+     * @var string
      */
-    protected $description = 'ยกเลิกการจองที่หมดเวลาชำระเงินแล้ว (สถานะ pending_payment)';
+    protected $description = 'Cancels bookings that have expired payment deadlines (status: pending_payment).';
 
     /**
      * Execute the console command.
+     *
+     * @return int
      */
     public function handle()
     {
-        // ค้นหาการจองที่สถานะเป็น 'pending_payment' และหมดเวลาแล้ว
-        $expiredBookings = Booking::where('status', 'pending_payment')
-            ->where('expires_at', '<', now())
-            ->get();
+        // Start a database transaction to ensure data integrity.
+        DB::beginTransaction();
 
-        $count = $expiredBookings->count();
-        if ($count > 0) {
-            foreach ($expiredBookings as $booking) {
-                // เปลี่ยนสถานะเป็น 'cancelled'
-                $booking->status = 'cancelled';
-                $booking->save();
+        try {
+            // Find and count the number of expired bookings.
+            $count = Booking::where('status', 'pending_payment')
+                ->where('expires_at', '<', now())
+                ->count();
+
+            // If there are expired bookings, update their status.
+            if ($count > 0) {
+                Booking::where('status', 'pending_payment')
+                    ->where('expires_at', '<', now())
+                    ->update(['status' => 'cancelled']);
+
+                $this->info("Successfully cancelled {$count} expired bookings.");
+            } else {
+                $this->info('No expired bookings to cancel.');
             }
-            $this->info("Cancelled {$count} expired bookings.");
-        } else {
-            $this->info('No expired bookings to cancel.');
-        }
 
-        return 0;
+            // Commit the transaction if everything is successful.
+            DB::commit();
+
+            return 0; // Return 0 for success.
+
+        } catch (\Exception $e) {
+            // Rollback the transaction if any error occurs.
+            DB::rollBack();
+            $this->error('Failed to cancel expired bookings: ' . $e->getMessage());
+            return 1; // Return 1 for failure.
+        }
     }
 }

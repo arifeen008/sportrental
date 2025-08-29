@@ -40,7 +40,7 @@ class UserMembershipController extends Controller
      */
     public function create()
     {
-                                                     // ดึงข้อมูลทั้งหมดที่จำเป็นสำหรับฟอร์ม
+        // ดึงข้อมูลทั้งหมดที่จำเป็นสำหรับฟอร์ม
         $users = User::where('role', 'user')->get(); // ดึงเฉพาะ user ทั่วไป
         $tiers = MembershipTier::all();
 

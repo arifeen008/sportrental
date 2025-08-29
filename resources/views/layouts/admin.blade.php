@@ -49,6 +49,21 @@
         .card.border-left-warning {
             border-left: .25rem solid var(--bs-warning) !important;
         }
+
+        /* New styling for logout button */
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #ffc107;
+            text-align: left;
+            padding: .5rem 1rem;
+            width: 100%;
+        }
+
+        .logout-btn:hover {
+            color: #fff;
+            background-color: #dc3545;
+        }
     </style>
     @stack('styles')
 </head>
@@ -90,6 +105,12 @@
                     <i class="fas fa-newspaper fa-fw me-2"></i> จัดการข่าวสาร
                 </a>
             </li>
+            <li class="nav-item mb-1">
+                <a href="{{ route('admin.reports.summary') }}"
+                    class="nav-link text-white {{ request()->routeIs('admin.reports.summary') ? 'active' : '' }}">
+                    <i class="fas fa-chart-line fa-fw me-2"></i> สรุปรายงาน
+                </a>
+            </li>
         </ul>
         <hr>
         <div class="dropdown">
@@ -103,8 +124,12 @@
                     <hr class="dropdown-divider">
                 </li>
                 <li>
-                    <form method="POST" action="{{ route('logout') }}">@csrf<a class="dropdown-item" href="#"
-                            onclick="event.preventDefault();this.closest('form').submit();">ออกจากระบบ</a></form>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="dropdown-item logout-btn">
+                            <i class="fas fa-sign-out-alt fa-fw me-2"></i>ออกจากระบบ
+                        </button>
+                    </form>
                 </li>
             </ul>
         </div>
