@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container-fluid">
-        <h1 class="h3 mb-4 text-gray-800"><i class="fas fa-chart-line"></i> สรุปรายงานการจอง</h1>
+        <h1 class="h3 mb-4 text-gray-800"><i class="fas fa-chart-bar"></i> รายงานสรุปการจอง</h1>
 
         {{-- ตัวเลือกช่วงเวลา --}}
         <div class="card shadow mb-4">
@@ -34,13 +34,14 @@
 
         {{-- สรุปภาพรวม --}}
         <div class="row">
+            {{-- รายได้รวม --}}
             <div class="col-md-4 mb-4">
-                <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card border-left-success shadow h-100 py-2">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    รายได้รวม (ไม่รวมมัดจำ)</div>
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    รายได้รวมทั้งหมด</div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">
                                     {{ number_format($totalRevenue, 2) }} บาท
                                 </div>
@@ -52,26 +53,7 @@
                     </div>
                 </div>
             </div>
-
-            <div class="col-md-4 mb-4">
-                <div class="card border-left-success shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    รายได้จากการจองรายชั่วโมง</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    {{ number_format($hourlyRevenue, 2) }} บาท
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            {{-- ยอดค่ามัดจำ --}}
             <div class="col-md-4 mb-4">
                 <div class="card border-left-warning shadow h-100 py-2">
                     <div class="card-body">
@@ -90,13 +72,32 @@
                     </div>
                 </div>
             </div>
+            {{-- จำนวนชั่วโมงที่จอง --}}
+            <div class="col-md-4 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    รวมจำนวนชั่วโมงที่ถูกจอง</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    {{ number_format($totalHoursBooked, 2) }} ชั่วโมง
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- รายงานการจอง --}}
         <div class="row">
-            {{-- รายงานตามประเภท --}}
+            {{-- รายงานตามประเภทการจอง --}}
             <div class="col-md-6 mb-4">
-                <div class="card shadow">
+                <div class="card shadow h-100">
                     <div class="card-header py-3">
                         <h6 class="m-0 font-weight-bold text-primary">สรุปตามประเภทการจอง</h6>
                     </div>
@@ -123,10 +124,9 @@
                     </div>
                 </div>
             </div>
-
             {{-- รายงานตามสนาม --}}
             <div class="col-md-6 mb-4">
-                <div class="card shadow">
+                <div class="card shadow h-100">
                     <div class="card-header py-3">
                         <h6 class="m-0 font-weight-bold text-primary">สรุปตามสนามที่จอง</h6>
                     </div>
@@ -147,5 +147,31 @@
             </div>
         </div>
 
+        {{-- ปุ่มสำหรับพิมพ์รายงาน --}}
+        <div class="d-grid mt-4">
+            <button onclick="window.print()" class="btn btn-secondary btn-lg"><i class="fas fa-print me-2"></i> พิมพ์รายงาน</button>
+        </div>
+
     </div>
 @endsection
+
+@push('styles')
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .container-fluid, .container-fluid * {
+                visibility: visible;
+            }
+            .container-fluid {
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+            .card-header, .btn-primary {
+                display: none !important;
+            }
+        }
+    </style>
+@endpush
