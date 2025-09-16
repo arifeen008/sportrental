@@ -128,8 +128,6 @@ class AuthController extends Controller
             $user->forceFill(['password' => Hash::make($password)])->save();
         });
 
-        return $status == Password::PASSWORD_RESET
-        ? redirect()->route('login')->with('status', __($status))
-        : back()->withErrors(['email' => [__($status)]]);
+        return $status == Password::PASSWORD_RESET ? redirect()->route('login')->with('status', __($status)): back()->withErrors(['email' => [__($status)]]);
     }
 }

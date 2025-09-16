@@ -12,6 +12,7 @@ use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\ReportController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Mail;
 
 Route::get('/', [HomeController::class, 'index']);
 // Routes สำหรับการล็อกอิน
