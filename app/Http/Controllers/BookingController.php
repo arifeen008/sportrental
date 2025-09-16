@@ -115,7 +115,7 @@ class BookingController extends Controller
                 $newSequence = $bookingsOnDate + 1;
 
                 // 4. สร้าง Booking Code รูปแบบใหม่
-                $bookingCode = $bookingDate->format('ymd') . '-' . $newSequence;
+                $bookingCode = $bookingDate->format('ymd') . $newSequence;
 
                 // 5. เตรียมข้อมูลทั้งหมดที่จะบันทึก
                 $bookingType = $request->input('booking_type');
@@ -134,7 +134,7 @@ class BookingController extends Controller
                     'user_membership_id' => $request->input('user_membership_id'),
                     'status'             => 'pending_payment',
                     'expires_at'         => now()->addMinutes(15),
-                                               // เพิ่มการจัดการค่ามัดจำ
+                    // เพิ่มการจัดการค่ามัดจำ
                     'deposit_amount'     => 0, // ค่าเริ่มต้น
                 ];
 
@@ -390,20 +390,20 @@ class BookingController extends Controller
 
         // และลบออกจาก return array ด้วย
         return [
-            'title'             => "สรุปการจองแบบเหมาวัน ({$rentalType})",
-            'package_name'      => $packageName,
-            'booking_date'      => $bookingDate,
-            'time_range'        => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
-            'base_price'        => $basePrice,
-            'overtime_cost'     => $overtimeCost,
-            'overtime_details'  => $overtimeDetails,
-            'total_price'       => $totalPrice,
-            'deposit_amount'    => $depositAmount,
+            'title' => "สรุปการจองแบบเหมาวัน ({$rentalType})",
+            'package_name' => $packageName,
+            'booking_date' => $bookingDate,
+            'time_range' => $startTime->format('H:i') . ' - ' . $endTime->format('H:i'),
+            'base_price' => $basePrice,
+            'overtime_cost' => $overtimeCost,
+            'overtime_details' => $overtimeDetails,
+            'total_price' => $totalPrice,
+            'deposit_amount' => $depositAmount,
             'duration_in_hours' => $durationInHours,
-            'special_perks'     => null,
-            'hours_to_deduct'   => null,
-            'discount_amount'   => 0,
-            'discount_reason'   => null,
+            'special_perks' => null,
+            'hours_to_deduct' => null,
+            'discount_amount' => 0,
+            'discount_reason' => null,
         ];
     }
     private function calculateMembershipUsage(Request $request)
@@ -504,9 +504,9 @@ class BookingController extends Controller
         "สนาม/แพ็กเกจ : {$itemDetails}\n" .
         "วันที่ :  " . thaidate('j F Y', (string) $booking->booking_date) . "\n" .
         "เวลา : " . Carbon::parse($booking->start_time)->format('H:i') . " - " . Carbon::parse($booking->end_time)->format('H:i') . " น.\n" .
-        "รวมเวลา : {$booking->duration_in_hours} ชั่วโมง\n" .
-        "ยอดชำระ : {$paymentAmount} บาท\n" .
-        "เบอร์โทร :  {$booking->user->phone_number}\n ";
+            "รวมเวลา : {$booking->duration_in_hours} ชั่วโมง\n" .
+            "ยอดชำระ : {$paymentAmount} บาท\n" .
+            "เบอร์โทร :  {$booking->user->phone_number}\n ";
 
         $body = [
             'to'       => $groupId,

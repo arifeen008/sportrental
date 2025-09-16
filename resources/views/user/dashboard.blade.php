@@ -263,7 +263,8 @@
                                 </p>
                             </div>
                             <div class="text-center mb-3">
-                                <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป" class="img-fluid rounded" style="max-height: 200px; display: none;">
+                                <img id="slip-preview-{{ $booking->id }}" src="#" alt="ตัวอย่างสลิป"
+                                    class="img-fluid rounded" style="max-height: 200px; display: none;">
                             </div>
                             <div class="mb-3">
                                 <label for="slipImage-{{ $booking->id }}" class="form-label">เลือกไฟล์รูปภาพสลิป</label>
@@ -297,7 +298,7 @@
         }
     </script>
 @endpush
-@section('scripts')
+@push('scripts')
     <script>
         // ตรวจสอบว่ามี session 'success' หรือไม่
         @if (session('success'))
@@ -328,4 +329,4 @@
             });
         @endif
     </script>
-@endsection
+@endpush
