@@ -37,8 +37,7 @@
                                             <label class="form-check-label" for="typeTournament">รายการแข่งขัน</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="rental_type"
-                                                id="typeCharity" value="การกุศล">
+                                            <input class="form-check-input" type="radio" name="rental_type" id="typeCharity" value="การกุศล">
                                             <label class="form-check-label" for="typeCharity">การกุศล</label>
                                         </div>
                                     </div>
@@ -58,8 +57,7 @@
                                 <div class="col-12">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="wants_overtime" name="wants_overtime" value="1">
-                                        <label class="form-check-label" for="wants_overtime">ต้องการช่วงเวลาเพิ่มเติม
-                                            (นอกเวลา หลัง 18:00 น.)</label>
+                                        <label class="form-check-label" for="wants_overtime">ต้องการช่วงเวลาเพิ่มเติม (นอกเวลา หลัง 18:00 น.)</label>
                                     </div>
                                 </div>
                                 <div id="overtime_end_time_wrapper" class="col-md-6 overtime-wrapper">
@@ -77,7 +75,7 @@
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                                <a href="{{ route('user.dashboard') }}" class="btn btn-secondary">&laquo; กลับแดชบอร์ด</a>
+                                <a href="{{ url()->previous() }}" class="btn btn-secondary btn-lg">กลับแดชบอร์ด</a>
                                 <button type="submit" class="btn btn-primary btn-lg">ตรวจสอบราคาและดำเนินการต่อ</button>
                             </div>
                         </form>

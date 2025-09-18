@@ -84,8 +84,7 @@
                                 </div>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                                <a href="{{ route('user.dashboard') }}" class="btn btn-secondary btn-lg">&laquo;
-                                    กลับแดชบอร์ด</a>
+                                <a href="{{ url()->previous() }}" class="btn btn-secondary btn-lg">กลับแดชบอร์ด</a>
                                 <button type="submit" id="submit-booking-btn-membership" class="btn btn-primary btn-lg"
                                     disabled>ตรวจสอบชั่วโมงและดำเนินการต่อ</button>
                             </div>
@@ -218,35 +217,4 @@
         });
     </script>
 @endpush
-@section('scripts')
-    <script>
-        // ตรวจสอบว่ามี session 'success' หรือไม่
-        @if (session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ!',
-                text: '{{ session('success') }}',
-                timer: 3000, // แสดงผล 3 วินาทีแล้วหายไป
-                showConfirmButton: false
-            });
-        @endif
-
-        // ตรวจสอบว่ามี session 'error' หรือไม่
-        @if (session('error'))
-            Swal.fire({
-                icon: 'error',
-                title: 'เกิดข้อผิดพลาด!',
-                text: '{{ session('error') }}'
-            });
-        @endif
-
-        // ตรวจสอบว่ามี session 'warning' หรือไม่
-        @if (session('warning'))
-            Swal.fire({
-                icon: 'warning',
-                title: 'คำเตือน',
-                text: '{{ session('warning') }}'
-            });
-        @endif
-    </script>
-@endsection
+@include('layouts.partials.sweetalert')

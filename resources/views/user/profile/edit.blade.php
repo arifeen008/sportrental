@@ -3,16 +3,6 @@
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-md-8">
-                {{-- @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif --}}
-
                 <div class="card shadow-sm mb-4">
                     <div class="card-header">
                         <h4>ข้อมูลส่วนตัว</h4>
@@ -62,10 +52,15 @@
                         </form>
                     </div>
                 </div>
+
+                {{-- ปุ่มย้อนกลับอยู่นอกฟอร์ม --}}
+                <div class="mt-4">
+                    <a href="{{ url()->previous() }}" class="btn btn-secondary">ย้อนกลับ</a>
+                </div>
             </div>
         </div>
     </div>
 @endsection
 
+
 @include('layouts.partials.sweetalert')
-@stack('scripts')
