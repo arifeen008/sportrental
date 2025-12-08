@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
-      - '*.x'
+      - "*.x"
   pull_request:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
 
 permissions:
   contents: read
@@ -45,3 +45,18 @@ jobs:
 
       - name: Execute tests
         run: php artisan test
+
+services:
+  mysql:
+    image: mysql:8
+    env:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: sportrental_test
+    ports:
+      - 3306:3306
+    options: >-
+      --health-cmd="mysqladmin ping -ppassword"
+      --health-interval=10s
+      --health-timeout=5s
+      --health-retries=3
+
