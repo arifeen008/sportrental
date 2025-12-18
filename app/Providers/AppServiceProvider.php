@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrap();
-        if($this->app->environment('local') || $this->app->environment('production')) {
+        if (config('app.env') !== 'local') { // หรือเช็คเงื่อนไขที่เหมาะสม
             URL::forceScheme('https');
         }
     }
